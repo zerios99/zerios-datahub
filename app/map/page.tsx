@@ -1100,7 +1100,14 @@ function MapPageContent() {
           {isBottomSheetOpen && (
             <div
               className="fixed inset-0 -z-20"
-              onClick={() => setIsBottomSheetOpen(false)}
+              onClick={() => {
+                setSelectedLocation(null);
+                if (markerRef.current) {
+                  markerRef.current.setMap(null);
+                  markerRef.current = null;
+                }
+                setIsBottomSheetOpen(false);
+              }}
             />
           )}
 
@@ -1124,6 +1131,10 @@ function MapPageContent() {
               <button
                 onClick={() => {
                   setSelectedLocation(null);
+                  if (markerRef.current) {
+                    markerRef.current.setMap(null);
+                    markerRef.current = null;
+                  }
                   setIsBottomSheetOpen(false);
                 }}
                 className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
