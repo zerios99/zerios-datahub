@@ -327,9 +327,8 @@ function MapPageContent() {
 
       markerRef.current = newMarker;
 
-      // Center map on selected location
+      // Center map on selected location without changing zoom
       map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
-      map.setZoom(15);
     }
   }, [map, selectedLocation]);
 
