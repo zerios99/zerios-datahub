@@ -249,7 +249,7 @@ function MapPageContent() {
           const mapInstance = new window.google.maps.Map(mapRef.current!, {
             center,
             zoom: 15,
-            mapTypeId: "satellite", // Satellite view with labels
+            mapTypeId: "hybrid",
             mapTypeControl: false,
             fullscreenControl: false,
             language: "ar", // Arabic language
@@ -1173,11 +1173,13 @@ function MapPageContent() {
 
 export default function MapPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl text-gray-600">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-xl text-gray-600">Loading...</div>
+        </div>
+      }
+    >
       <MapPageContent />
     </Suspense>
   );
