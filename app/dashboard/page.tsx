@@ -95,7 +95,7 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-sm font-medium text-gray-500">Total Locations</h3>
             <p className="text-3xl font-bold text-gray-900 mt-2">{locations.length}</p>
@@ -104,6 +104,12 @@ export default function DashboardPage() {
             <h3 className="text-sm font-medium text-gray-500">Approved</h3>
             <p className="text-3xl font-bold text-green-600 mt-2">
               {locations.filter(l => l.status === 'APPROVED').length}
+            </p>
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="text-sm font-medium text-gray-500">Rejected</h3>
+            <p className="text-3xl font-bold text-red-600 mt-2">
+              {locations.filter(l => l.status === 'REJECTED').length}
             </p>
           </div>
           <div className="bg-white rounded-lg shadow p-6">
