@@ -74,6 +74,25 @@ export default function MapPage() {
     }
   }, [user, loading, router]);
 
+  // Get user's current location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setSelectedLocation(userLocation);
+        },
+        (error) => {
+          console.log('Error getting location:', error);
+          // Fallback to Damascus if location access is denied
+        }
+      );
+    }
+  }, []);
+
   // Initialize Google Maps
   useEffect(() => {
     const initMap = () => {
@@ -88,42 +107,83 @@ export default function MapPage() {
       }
 
       if (mapRef.current && window.google) {
-        const mapInstance = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 33.5138, lng: 36.2765 }, // Damascus coordinates
-          zoom: 12,
-          mapTypeId: 'hybrid', // Satellite view with labels
-          mapTypeControl: false,
-          fullscreenControl: false,
-          language: 'ar', // Arabic language
-        });
-
-        setMap(mapInstance);
-
-        mapInstance.addListener('click', (e: google.maps.MapMouseEvent) => {
-          if (e.latLng) {
-            const lat = e.latLng.lat();
-            const lng = e.latLng.lng();
-            setSelectedLocation({ lat, lng });
-
-            if (markerRef.current) {
-              markerRef.current.setMap(null);
+        // Get current location or fallback to Damascus
+        const getCurrentLocation = () => {
+          return new Promise<{ lat: number; lng: number }>((resolve) => {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  resolve({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                  });
+                },
+                () => {
+                  // Fallback to Damascus
+                  resolve({ lat: 33.5138, lng: 36.2765 });
+                }
+              );
+            } else {
+              resolve({ lat: 33.5138, lng: 36.2765 });
             }
+          });
+        };
 
-            const newMarker = new window.google.maps.Marker({
-              position: { lat, lng },
+        getCurrentLocation().then((center) => {
+          const mapInstance = new window.google.maps.Map(mapRef.current!, {
+            center,
+            zoom: 15,
+            mapTypeId: 'hybrid', // Satellite view with labels
+            mapTypeControl: false,
+            fullscreenControl: false,
+            language: 'ar', // Arabic language
+          });
+
+          setMap(mapInstance);
+
+          // Add a blue dot marker for current location
+          if (center.lat !== 33.5138 || center.lng !== 36.2765) {
+            new window.google.maps.Marker({
+              position: center,
               map: mapInstance,
-              title: 'Selected Location',
-              animation: window.google.maps.Animation.DROP,
+              title: 'موقعك الحالي',
+              icon: {
+                path: window.google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: '#4285F4',
+                fillOpacity: 1,
+                strokeColor: '#ffffff',
+                strokeWeight: 2,
+              },
             });
-
-            markerRef.current = newMarker;
-
-            // Open bottom sheet on mobile when location is selected
-            if (window.innerWidth < 768) {
-              setIsBottomSheetOpen(true);
-              setSheetHeight(85); // Reset to full height when opening
-            }
           }
+
+          mapInstance.addListener('click', (e: google.maps.MapMouseEvent) => {
+            if (e.latLng) {
+              const lat = e.latLng.lat();
+              const lng = e.latLng.lng();
+              setSelectedLocation({ lat, lng });
+
+              if (markerRef.current) {
+                markerRef.current.setMap(null);
+              }
+
+              const newMarker = new window.google.maps.Marker({
+                position: { lat, lng },
+                map: mapInstance,
+                title: 'الموقع المحدد',
+                animation: window.google.maps.Animation.DROP,
+              });
+
+              markerRef.current = newMarker;
+
+              // Open bottom sheet on mobile when location is selected
+              if (window.innerWidth < 768) {
+                setIsBottomSheetOpen(true);
+                setSheetHeight(85); // Reset to full height when opening
+              }
+            }
+          });
         });
       }
     };
