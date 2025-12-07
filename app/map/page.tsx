@@ -1122,7 +1122,10 @@ function MapPageContent() {
             {/* Header with Close Button */}
             <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-gray-800">
               <button
-                onClick={() => setIsBottomSheetOpen(false)}
+                onClick={() => {
+                  setSelectedLocation(null);
+                  setIsBottomSheetOpen(false);
+                }}
                 className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
               >
                 <svg
