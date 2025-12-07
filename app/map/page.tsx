@@ -57,6 +57,14 @@ export default function MapPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [sheetHeight, setSheetHeight] = useState(85); // Percentage of viewport height
 
+  // Stats state
+  const [stats, setStats] = useState({
+    total: 0,
+    approved: 0,
+    rejected: 0,
+    pending: 0,
+  });
+
   // Check if mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -73,6 +81,31 @@ export default function MapPage() {
       router.push("/login");
     }
   }, [user, loading, router]);
+
+  // Fetch location stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/user/locations');
+        if (response.ok) {
+          const data = await response.json();
+          const locations = data.locations || [];
+          setStats({
+            total: locations.length,
+            approved: locations.filter((loc: any) => loc.status === 'APPROVED').length,
+            rejected: locations.filter((loc: any) => loc.status === 'REJECTED').length,
+            pending: locations.filter((loc: any) => loc.status === 'PENDING').length,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    };
+
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
 
   // Get user's current location
   useEffect(() => {
@@ -577,21 +610,6 @@ export default function MapPage() {
             className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
             style={{ direction: "rtl" }}
           />
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
         </div>
       </div>
 
@@ -673,21 +691,6 @@ export default function MapPage() {
             className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
             style={{ direction: "rtl" }}
           />
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
         </div>
       </div>
 
@@ -878,7 +881,7 @@ export default function MapPage() {
               </svg>
             </div>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push("/dashboard")}
               className="shrink-0 w-12 h-12 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
             >
               <svg
@@ -896,32 +899,30 @@ export default function MapPage() {
               </svg>
             </button>
           </div>
-          <h1 className="text-xl font-bold text-white text-center mb-2">
-            نظام تجميع النقاط
-          </h1>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setPointType("new")}
-              className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-                pointType === "new"
-                  ? "bg-gray-700 text-white border border-gray-600"
-                  : "bg-gray-800 text-gray-400 border border-gray-700"
-              }`}
-            >
-              نقطة جديدة
-            </button>
-            <button
-              onClick={() => setPointType("edit")}
-              className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-                pointType === "edit"
-                  ? "bg-gray-700 text-white border border-gray-600"
-                  : "bg-gray-800 text-gray-400 border border-gray-700"
-              }`}
-            >
-              تعديل نقطة
-            </button>
+        </div>
+
+        {/* Stats Section */}
+        <div className="px-6 py-4 border-b border-gray-800">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
+              <div className="text-2xl font-bold text-white">{stats.total}</div>
+              <div className="text-xs text-gray-400 mt-1">المجموع</div>
+            </div>
+            <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
+              <div className="text-2xl font-bold text-green-400">{stats.approved}</div>
+              <div className="text-xs text-green-400 mt-1">موافق</div>
+            </div>
+            <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
+              <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
+              <div className="text-xs text-red-400 mt-1">مرفوض</div>
+            </div>
+            <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
+              <div className="text-2xl font-bold text-yellow-400">{stats.pending}</div>
+              <div className="text-xs text-yellow-400 mt-1">قيد الانتظار</div>
+            </div>
           </div>
         </div>
+
         <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
           {formContent}
         </div>
@@ -957,7 +958,7 @@ export default function MapPage() {
                 </svg>
               </div>
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push("/dashboard")}
                 className="shrink-0 w-12 h-12 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
               >
                 <svg
@@ -973,31 +974,6 @@ export default function MapPage() {
                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                   />
                 </svg>
-              </button>
-            </div>
-            <h2 className="text-xl font-bold text-white text-center mb-3">
-              نظام تجميع النقاط
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPointType("new")}
-                className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-                  pointType === "new"
-                    ? "bg-gray-700 text-white border border-gray-600"
-                    : "bg-gray-800 text-gray-400 border border-gray-700"
-                }`}
-              >
-                نقطة جديدة
-              </button>
-              <button
-                onClick={() => setPointType("edit")}
-                className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-                  pointType === "edit"
-                    ? "bg-gray-700 text-white border border-gray-600"
-                    : "bg-gray-800 text-gray-400 border border-gray-700"
-                }`}
-              >
-                تعديل نقطة
               </button>
             </div>
           </div>
@@ -1057,10 +1033,32 @@ export default function MapPage() {
               <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
             </div>
 
+            {/* Stats Section */}
+            <div className="px-4 pb-3 border-b border-gray-800">
+              <div className="grid grid-cols-4 gap-2">
+                <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
+                  <div className="text-2xl font-bold text-white">{stats.total}</div>
+                  <div className="text-xs text-gray-400 mt-1">المجموع</div>
+                </div>
+                <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
+                  <div className="text-2xl font-bold text-green-400">{stats.approved}</div>
+                  <div className="text-xs text-green-400 mt-1">موافق</div>
+                </div>
+                <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
+                  <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
+                  <div className="text-xs text-red-400 mt-1">مرفوض</div>
+                </div>
+                <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
+                  <div className="text-2xl font-bold text-yellow-400">{stats.pending}</div>
+                  <div className="text-xs text-yellow-400 mt-1">قيد الانتظار</div>
+                </div>
+              </div>
+            </div>
+
             {/* Content */}
             <div
               className="overflow-y-auto p-4 bg-gray-900"
-              style={{ height: "calc(100% - 32px)" }}
+              style={{ height: "calc(100% - 120px)" }}
             >
               {formContent}
             </div>
