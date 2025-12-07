@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 declare global {
@@ -12,6 +12,8 @@ declare global {
 
 export default function MapPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editLocationId = searchParams.get("edit");
   const { user, loading } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
@@ -38,16 +40,44 @@ export default function MapPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingLocationId, setEditingLocationId] = useState<string | null>(
+    null
+  );
 
   // Options for dropdowns
-  const CITIES = ["دمشق", "حلب", "حمص", "اللاذقية", "حماة"];
+  const CITIES = [
+    "دمشق",
+    "ريف دمشق",
+    "القنيطرة",
+    "درعا",
+    "السويداء",
+    "حمص",
+    "حماة",
+    "طرطوس",
+    "اللاذقية",
+    "إدلب",
+    "حلب",
+    "الرقة",
+    "دير الزور",
+    "الحسكة",
+  ];
   const CATEGORIES = [
-    "جسر / نفق",
-    "تقاطع",
-    "دوار",
-    "شارع",
-    "معلم بارز",
-    "مبنى",
+    "🚐 موقف نقل",
+    "📍 معلم معروف",
+    "🛣️ جسر / نفق",
+    "🚪 مدخل حي",
+    "🛒 سوق / منطقة تجارية",
+    "🏬 مول / مركز تسوق",
+    "🕌 / ⛪ جامع / كنيسة",
+    "🏥 مشفى / مركز طبي",
+    "🎓 مدرسة / جامعة",
+    "🚌 كراج / محطة نقل",
+    "🍽️ مطعم / محل مشهور",
+    "🌳 حديقة / ساحة",
+    "⛽ محطة وقود",
+    "🏛️ دائرة حكومية",
+    "⚽ ملعب / نادي رياضي",
   ];
 
   // Mobile bottom sheet state
@@ -86,19 +116,22 @@ export default function MapPage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/user/locations');
+        const response = await fetch("/api/user/locations");
         if (response.ok) {
           const data = await response.json();
           const locations = data.locations || [];
           setStats({
             total: locations.length,
-            approved: locations.filter((loc: any) => loc.status === 'APPROVED').length,
-            rejected: locations.filter((loc: any) => loc.status === 'REJECTED').length,
-            pending: locations.filter((loc: any) => loc.status === 'PENDING').length,
+            approved: locations.filter((loc: any) => loc.status === "APPROVED")
+              .length,
+            rejected: locations.filter((loc: any) => loc.status === "REJECTED")
+              .length,
+            pending: locations.filter((loc: any) => loc.status === "PENDING")
+              .length,
           });
         }
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error("Error fetching stats:", error);
       }
     };
 
@@ -106,6 +139,56 @@ export default function MapPage() {
       fetchStats();
     }
   }, [user]);
+
+  // Load location data when editing
+  useEffect(() => {
+    const loadLocationForEdit = async () => {
+      if (editLocationId && user) {
+        try {
+          setIsEditMode(true);
+          setEditingLocationId(editLocationId);
+
+          const response = await fetch("/api/user/locations");
+          if (response.ok) {
+            const data = await response.json();
+            const location = data.locations.find(
+              (loc: any) => loc.id === editLocationId
+            );
+
+            if (location) {
+              // Pre-populate form fields
+              setPopularPlaceName(location.name);
+              setCity(location.city);
+              setCategory(location.category);
+              setSelectedLocation({
+                lat: location.latitude,
+                lng: location.longitude,
+              });
+
+              // Set point type to edit
+              setPointType("edit");
+
+              // Open bottom sheet on mobile
+              if (window.innerWidth < 768) {
+                setIsBottomSheetOpen(true);
+                setSheetHeight(85);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error loading location for edit:", error);
+          setMessage({
+            type: "error",
+            text: "Failed to load location data",
+          });
+        }
+      }
+    };
+
+    if (editLocationId && user) {
+      loadLocationForEdit();
+    }
+  }, [editLocationId, user]);
 
   // Get user's current location
   useEffect(() => {
@@ -166,7 +249,7 @@ export default function MapPage() {
           const mapInstance = new window.google.maps.Map(mapRef.current!, {
             center,
             zoom: 15,
-            mapTypeId: "hybrid", // Satellite view with labels
+            mapTypeId: "satellite", // Satellite view with labels
             mapTypeControl: false,
             fullscreenControl: false,
             language: "ar", // Arabic language
@@ -225,6 +308,30 @@ export default function MapPage() {
       initMap();
     }
   }, [user]);
+
+  // Update marker when selectedLocation changes (for edit mode)
+  useEffect(() => {
+    if (map && selectedLocation) {
+      // Remove existing marker
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+      }
+
+      // Add new marker at selected location
+      const newMarker = new window.google.maps.Marker({
+        position: { lat: selectedLocation.lat, lng: selectedLocation.lng },
+        map: map,
+        title: "الموقع المحدد",
+        animation: window.google.maps.Animation.DROP,
+      });
+
+      markerRef.current = newMarker;
+
+      // Center map on selected location
+      map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
+      map.setZoom(15);
+    }
+  }, [map, selectedLocation]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -285,7 +392,7 @@ export default function MapPage() {
       return;
     }
 
-    if (images.length === 0) {
+    if (images.length === 0 && !isEditMode) {
       setMessage({ type: "error", text: "Please add at least one photo" });
       return;
     }
@@ -299,62 +406,56 @@ export default function MapPage() {
         imageUrls = await uploadImages(images);
       }
 
-      const response = await fetch("/api/locations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: popularPlaceName,
-          formalPlaceName,
-          city,
-          street,
-          side,
-          latitude: selectedLocation.lat,
-          longitude: selectedLocation.lng,
-          category,
-          belongsToRoute,
-          photoConfidence,
-          notes,
-          pointType,
-          isSponsored: false,
-          images: imageUrls,
-        }),
-      });
+      const locationData = {
+        name: popularPlaceName,
+        formalPlaceName,
+        city,
+        street,
+        side,
+        latitude: selectedLocation.lat,
+        longitude: selectedLocation.lng,
+        category,
+        belongsToRoute,
+        photoConfidence,
+        notes,
+        pointType,
+        isSponsored: false,
+        ...(imageUrls.length > 0 && { images: imageUrls }),
+      };
+
+      let response;
+      if (isEditMode && editingLocationId) {
+        // Update existing location
+        response = await fetch(`/api/user/locations/${editingLocationId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(locationData),
+        });
+      } else {
+        // Create new location
+        response = await fetch("/api/locations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...locationData,
+            images: imageUrls,
+          }),
+        });
+      }
 
       if (!response.ok) throw new Error("Failed to save location");
 
       setMessage({
         type: "success",
-        text: "Location saved successfully! It will be reviewed by admin.",
+        text: isEditMode
+          ? "Location updated successfully! It will be reviewed by admin."
+          : "Location saved successfully! It will be reviewed by admin.",
       });
 
-      // Reset form
-      setCity("");
-      setPopularPlaceName("");
-      setFormalPlaceName("");
-      setStreet("");
-      setSide("");
-      setCategory("");
-      setBelongsToRoute("");
-      setImages([]);
-      setPhotoConfidence("100");
-      setNotes("");
-      setPointType("new");
-      setSelectedLocation(null);
-      if (markerRef.current) {
-        markerRef.current.setMap(null);
-        markerRef.current = null;
-      }
-
-      const fileInput = document.getElementById("images") as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-
-      // Close bottom sheet on mobile after successful save
-      if (isMobile) {
-        setTimeout(() => {
-          setIsBottomSheetOpen(false);
-          setMessage(null);
-        }, 2000);
-      }
+      // Reset form and redirect after a delay
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 2000);
     } catch (error) {
       console.error("Error saving location:", error);
       setMessage({
@@ -400,7 +501,7 @@ export default function MapPage() {
   const formContent = (
     <form onSubmit={handleSubmit} className="space-y-3 text-base" dir="rtl">
       <h2 className="text-xl font-bold text-white text-center mt-4 mb-3">
-        نظام تجميع النقاط
+        {isEditMode ? "تعديل الموقع" : "نظام تجميع النقاط"}
       </h2>
       <div className="flex gap-2">
         <button
@@ -565,21 +666,6 @@ export default function MapPage() {
             style={{ direction: "rtl" }}
             required
           />
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
         </div>
       </div>
 
@@ -804,7 +890,7 @@ export default function MapPage() {
         disabled={isSubmitting || !selectedLocation}
         className="w-full bg-gray-800 text-white py-5 px-6 rounded-[28px] text-lg font-semibold border border-gray-700 hover:bg-gray-750 focus:outline-none focus:ring-2 focus:ring-gray-600 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
       >
-        {isSubmitting ? "جاري الحفظ..." : "حفظ"}
+        {isSubmitting ? "جاري الحفظ..." : isEditMode ? "تحديث الموقع" : "حفظ"}
       </button>
     </form>
   );
@@ -909,15 +995,21 @@ export default function MapPage() {
               <div className="text-xs text-gray-400 mt-1">المجموع</div>
             </div>
             <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
-              <div className="text-2xl font-bold text-green-400">{stats.approved}</div>
+              <div className="text-2xl font-bold text-green-400">
+                {stats.approved}
+              </div>
               <div className="text-xs text-green-400 mt-1">موافق</div>
             </div>
             <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
-              <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
+              <div className="text-2xl font-bold text-red-400">
+                {stats.rejected}
+              </div>
               <div className="text-xs text-red-400 mt-1">مرفوض</div>
             </div>
             <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
-              <div className="text-2xl font-bold text-yellow-400">{stats.pending}</div>
+              <div className="text-2xl font-bold text-yellow-400">
+                {stats.pending}
+              </div>
               <div className="text-xs text-yellow-400 mt-1">قيد الانتظار</div>
             </div>
           </div>
@@ -1037,20 +1129,30 @@ export default function MapPage() {
             <div className="px-4 pb-3 border-b border-gray-800">
               <div className="grid grid-cols-4 gap-2">
                 <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
-                  <div className="text-2xl font-bold text-white">{stats.total}</div>
+                  <div className="text-2xl font-bold text-white">
+                    {stats.total}
+                  </div>
                   <div className="text-xs text-gray-400 mt-1">المجموع</div>
                 </div>
                 <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
-                  <div className="text-2xl font-bold text-green-400">{stats.approved}</div>
+                  <div className="text-2xl font-bold text-green-400">
+                    {stats.approved}
+                  </div>
                   <div className="text-xs text-green-400 mt-1">موافق</div>
                 </div>
                 <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
-                  <div className="text-2xl font-bold text-red-400">{stats.rejected}</div>
+                  <div className="text-2xl font-bold text-red-400">
+                    {stats.rejected}
+                  </div>
                   <div className="text-xs text-red-400 mt-1">مرفوض</div>
                 </div>
                 <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
-                  <div className="text-2xl font-bold text-yellow-400">{stats.pending}</div>
-                  <div className="text-xs text-yellow-400 mt-1">قيد الانتظار</div>
+                  <div className="text-2xl font-bold text-yellow-400">
+                    {stats.pending}
+                  </div>
+                  <div className="text-xs text-yellow-400 mt-1">
+                    قيد الانتظار
+                  </div>
                 </div>
               </div>
             </div>
