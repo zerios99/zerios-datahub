@@ -949,7 +949,7 @@ function MapPageContent() {
               <input
                 type="text"
                 placeholder="بحث عن موقع"
-                className="w-full px-4 py-3 pr-12 bg-gray-800 border border-gray-700 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                className="w-full px-4 py-3 pr-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 dir="rtl"
               />
               <svg
@@ -968,7 +968,7 @@ function MapPageContent() {
             </div>
             <button
               onClick={() => router.push("/dashboard")}
-              className="shrink-0 w-12 h-12 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
+              className="shrink-0 w-12 h-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full flex items-center justify-center hover:bg-gray-750/50 transition-colors"
             >
               <svg
                 className="w-6 h-6 text-white"
@@ -1025,14 +1025,14 @@ function MapPageContent() {
         <div ref={mapRef} className="w-full h-full" />
 
         {/* Mobile Header */}
-        <div className="md:hidden absolute top-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm shadow-sm z-10 border-b border-gray-800">
+        <div className="md:hidden absolute top-0 left-0 right-0 bg-transparent backdrop-blur-sm shadow-sm z-10 border-b border-gray-800/30">
           <div className="p-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="بحث عن موقع"
-                  className="w-full px-4 py-3 pr-12 bg-gray-800 border border-gray-700 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                  className="w-full px-4 py-3 pr-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-600"
                   dir="rtl"
                 />
                 <svg
@@ -1051,7 +1051,7 @@ function MapPageContent() {
               </div>
               <button
                 onClick={() => router.push("/dashboard")}
-                className="shrink-0 w-12 h-12 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
+                className="shrink-0 w-12 h-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full flex items-center justify-center hover:bg-gray-750/50 transition-colors"
               >
                 <svg
                   className="w-6 h-6 text-white"
@@ -1120,9 +1120,30 @@ function MapPageContent() {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {/* Handle */}
-            <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
-              <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
+            {/* Header with Close Button */}
+            <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-gray-800">
+              <button
+                onClick={() => setIsBottomSheetOpen(false)}
+                className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+              <div className="flex-1 flex justify-center">
+                <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
+              </div>
+              <div className="w-10 h-10" /> {/* Spacer for centering */}
             </div>
 
             {/* Stats Section */}
