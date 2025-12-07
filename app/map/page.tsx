@@ -54,8 +54,8 @@ export default function MapPage() {
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
-  const [dragCurrentY, setDragCurrentY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [sheetHeight, setSheetHeight] = useState(85); // Percentage of viewport height
 
   // Check if mobile
   useEffect(() => {
@@ -121,6 +121,7 @@ export default function MapPage() {
             // Open bottom sheet on mobile when location is selected
             if (window.innerWidth < 768) {
               setIsBottomSheetOpen(true);
+              setSheetHeight(85); // Reset to full height when opening
             }
           }
         });
@@ -566,7 +567,7 @@ export default function MapPage() {
     </form>
   );
 
-  // Drag handlers for bottom sheet
+  // Drag handlers for bottom sheet with snap points
   const handleTouchStart = (e: React.TouchEvent) => {
     setDragStartY(e.touches[0].clientY);
     setIsDragging(true);
@@ -574,17 +575,37 @@ export default function MapPage() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging) return;
-    setDragCurrentY(e.touches[0].clientY);
+    const currentY = e.touches[0].clientY;
+    const dragDistance = currentY - dragStartY;
+    const windowHeight = window.innerHeight;
+    
+    // Calculate new height based on drag
+    const newHeightPercent = sheetHeight - (dragDistance / windowHeight) * 100;
+    
+    // Clamp between 20% and 85%
+    const clampedHeight = Math.max(20, Math.min(85, newHeightPercent));
+    setSheetHeight(clampedHeight);
   };
 
   const handleTouchEnd = () => {
     if (!isDragging) return;
-    const dragDistance = dragCurrentY - dragStartY;
-    if (dragDistance > 100) {
+    
+    // Snap to nearest point: 85%, 50%, 30%, 20%, or close
+    const snapPoints = [85, 50, 30, 20];
+    
+    if (sheetHeight < 15) {
+      // Close if dragged below 15%
       setIsBottomSheetOpen(false);
+      setSheetHeight(85);
+    } else {
+      // Find nearest snap point
+      const nearest = snapPoints.reduce((prev, curr) =>
+        Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
+      );
+      setSheetHeight(nearest);
     }
+    
     setIsDragging(false);
-    setDragCurrentY(0);
     setDragStartY(0);
   };
 
@@ -693,10 +714,13 @@ export default function MapPage() {
 
           {/* Bottom Sheet */}
           <div
-            className={`fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl shadow-2xl z-50 transform transition-transform duration-300 ease-out ${
-              isBottomSheetOpen ? 'translate-y-0' : 'translate-y-full'
+            className={`fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl shadow-2xl z-50 transition-all duration-300 ease-out ${
+              isBottomSheetOpen ? '' : 'translate-y-full'
             }`}
-            style={{ maxHeight: '85vh' }}
+            style={{ 
+              height: isBottomSheetOpen ? `${sheetHeight}vh` : '0vh',
+              transform: isBottomSheetOpen ? 'translateY(0)' : 'translateY(100%)'
+            }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}>
@@ -708,7 +732,7 @@ export default function MapPage() {
             {/* Content */}
             <div
               className='overflow-y-auto p-4 bg-gray-900'
-              style={{ maxHeight: 'calc(85vh - 20px)' }}>
+              style={{ height: 'calc(100% - 32px)' }}>
               {formContent}
             </div>
           </div>
