@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,10 +15,10 @@ export default function Home() {
             <>
               <span className="text-gray-600 text-sm">Hello, {user.name}</span>
               <Link
-                href={user.role === 'ADMIN' ? '/admin' : '/dashboard'}
+                href={user.role === "ADMIN" ? "/admin" : "/dashboard"}
                 className="text-blue-600 hover:text-blue-700 font-medium text-sm"
               >
-                {user.role === 'ADMIN' ? 'Admin Panel' : 'Dashboard'}
+                {user.role === "ADMIN" ? "Admin Panel" : "Dashboard"}
               </Link>
               <button
                 onClick={() => logout()}
@@ -35,12 +35,6 @@ export default function Home() {
               >
                 Sign In
               </Link>
-              <Link
-                href="/register"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-              >
-                Sign Up
-              </Link>
             </>
           )}
         </div>
@@ -55,7 +49,7 @@ export default function Home() {
             Add and manage locations with Google Maps integration
           </p>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row gap-4">
           {user ? (
             <>
@@ -91,7 +85,9 @@ export default function Home() {
         </div>
 
         <div className="mt-8 p-6 bg-white rounded-lg shadow-md max-w-2xl">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">Features</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+            Features
+          </h2>
           <ul className="space-y-2 text-gray-600">
             <li className="flex items-start">
               <span className="mr-2">📍</span>
