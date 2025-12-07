@@ -85,7 +85,7 @@ function MapPageContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [dragStartY, setDragStartY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [sheetHeight, setSheetHeight] = useState(85); // Percentage of viewport height
+  const [sheetHeight, setSheetHeight] = useState(30); // Percentage of viewport height
 
   // Stats state
   const [stats, setStats] = useState({
@@ -171,7 +171,7 @@ function MapPageContent() {
               // Open bottom sheet on mobile
               if (window.innerWidth < 768) {
                 setIsBottomSheetOpen(true);
-                setSheetHeight(85);
+                setSheetHeight(30);
               }
             }
           }
@@ -296,7 +296,7 @@ function MapPageContent() {
               // Open bottom sheet on mobile when location is selected
               if (window.innerWidth < 768) {
                 setIsBottomSheetOpen(true);
-                setSheetHeight(85); // Reset to full height when opening
+                setSheetHeight(30); // Reset to default height when opening
               }
             }
           });
