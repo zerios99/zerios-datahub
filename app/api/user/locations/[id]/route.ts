@@ -4,7 +4,7 @@ import { getSession } from '@/lib/auth';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getSession();
@@ -16,7 +16,7 @@ export async function PATCH(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const {
       name,
@@ -55,7 +55,7 @@ export async function PATCH(
     }
 
     // Prepare update data
-    const updateData: Record<string, any> = {};
+    const updateData: Record<string, string | number | boolean> = {};
     if (name !== undefined) updateData.name = name;
     if (formalPlaceName !== undefined) updateData.formalPlaceName = formalPlaceName;
     if (city !== undefined) updateData.city = city;
