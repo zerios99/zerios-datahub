@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-export default function MapPage() {
+function MapPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editLocationId = searchParams.get("edit");
@@ -1168,5 +1168,17 @@ export default function MapPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function MapPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-xl text-gray-600">Loading...</div>
+      </div>
+    }>
+      <MapPageContent />
+    </Suspense>
   );
 }
