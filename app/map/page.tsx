@@ -40,21 +40,22 @@ export default function MapPage() {
   } | null>(null);
 
   // Options for dropdowns
-  const CITIES = ['Damascus', 'Aleppo', 'Homs', 'Latakia', 'Hama'];
-  const SIDES = ['Baramkeh Side', 'Mazzeh Side', 'Malki Side', 'Shaalan Side'];
+  const CITIES = ['دمشق', 'حلب', 'حمص', 'اللاذقية', 'حماة'];
   const CATEGORIES = [
-    'Bridge / Tunnel',
-    'Intersection',
-    'Roundabout',
-    'Street',
-    'Landmark',
-    'Building',
+    'جسر / نفق',
+    'تقاطع',
+    'دوار',
+    'شارع',
+    'معلم بارز',
+    'مبنى',
   ];
-  const ROUTES = ['Route 1', 'Route 2', 'Route 3', 'Route 4', 'Route 5'];
 
   // Mobile bottom sheet state
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [dragStartY, setDragStartY] = useState(0);
+  const [dragCurrentY, setDragCurrentY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   // Check if mobile
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function MapPage() {
     const initMap = () => {
       if (!window.google) {
         const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&language=ar`;
         script.async = true;
         script.defer = true;
         script.onload = () => initMap();
@@ -88,10 +89,12 @@ export default function MapPage() {
 
       if (mapRef.current && window.google) {
         const mapInstance = new window.google.maps.Map(mapRef.current, {
-          center: { lat: 40.7128, lng: -74.006 },
+          center: { lat: 33.5138, lng: 36.2765 }, // Damascus coordinates
           zoom: 12,
+          mapTypeId: 'hybrid', // Satellite view with labels
           mapTypeControl: false,
           fullscreenControl: false,
+          language: 'ar', // Arabic language
         });
 
         setMap(mapInstance);
@@ -295,163 +298,194 @@ export default function MapPage() {
   if (!user) return null;
 
   const formContent = (
-    <form onSubmit={handleSubmit} className='space-y-4'>
-      {selectedLocation && (
-        <div className='p-3 bg-blue-50 rounded-lg border border-blue-200'>
-          <p className='text-xs font-semibold text-blue-900 mb-1'>Selected Coordinates</p>
-          <p className='text-xs text-blue-800'>
-            <span className='font-medium'>Lat:</span> {selectedLocation.lat.toFixed(6)},
-            <span className='font-medium ml-2'>Lng:</span>{' '}
-            {selectedLocation.lng.toFixed(6)}
-          </p>
-        </div>
-      )}
-
+    <form onSubmit={handleSubmit} className='space-y-3 text-base' dir='rtl'>
       {/* City */}
       <div>
-        <label htmlFor='city' className='block text-sm font-medium text-gray-700 mb-1'>
-          City
-        </label>
-        <select
-          id='city'
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
-          required>
-          <option value=''>Please select</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 1) Popular place name (required) */}
-      <div>
-        <label
-          htmlFor='popularPlaceName'
-          className='block text-sm font-medium text-gray-700 mb-1'>
-          1) Popular place name (required)
-        </label>
-        <input
-          type='text'
-          id='popularPlaceName'
-          value={popularPlaceName}
-          onChange={(e) => setPopularPlaceName(e.target.value)}
-          placeholder='e.g. Jisr al-Hurriyah – Baramkeh Side'
-          className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
-          required
-        />
-      </div>
-
-      {/* 2) Formal place name */}
-      <div>
-        <label
-          htmlFor='formalPlaceName'
-          className='block text-sm font-medium text-gray-700 mb-1'>
-          2) Formal place name
-        </label>
-        <input
-          type='text'
-          id='formalPlaceName'
-          value={formalPlaceName}
-          onChange={(e) => setFormalPlaceName(e.target.value)}
-          placeholder='e.g. Yusuf al-Azmah Square'
-          className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
-        />
-      </div>
-
-      {/* 3) Street (required) */}
-      <div>
-        <label htmlFor='street' className='block text-sm font-medium text-gray-700 mb-1'>
-          3) Street (required)
-        </label>
-        <input
-          type='text'
-          id='street'
-          value={street}
-          onChange={(e) => setStreet(e.target.value)}
-          placeholder='e.g. Revolution Street'
-          className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
-          required
-        />
-      </div>
-
-      {/* 4) Side and 5) Category - side by side */}
-      <div className='flex gap-3'>
-        <div className='flex-1'>
-          <label htmlFor='side' className='block text-sm font-medium text-gray-700 mb-1'>
-            4) Side (required)
-          </label>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
           <select
-            id='side'
-            value={side}
-            onChange={(e) => setSide(e.target.value)}
-            className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
+            id='city'
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base focus:outline-none focus:ring-2 focus:ring-gray-600 appearance-none'
+            style={{ direction: 'rtl' }}
             required>
-            <option value=''>Select</option>
-            {SIDES.map((s) => (
-              <option key={s} value={s}>
-                {s}
+            <option value=''>المدينة</option>
+            {CITIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </select>
+          <div className='absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'>
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+            </svg>
+          </div>
         </div>
-        <div className='flex-1'>
-          <label
-            htmlFor='category'
-            className='block text-sm font-medium text-gray-700 mb-1'>
-            5) Category (required)
-          </label>
+      </div>
+
+      {/* Popular place name */}
+      <div>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
+          <input
+            type='text'
+            id='popularPlaceName'
+            value={popularPlaceName}
+            onChange={(e) => setPopularPlaceName(e.target.value)}
+            placeholder='الاسم الشائع للمكان (مطلوب)'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+            style={{ direction: 'rtl' }}
+            required
+          />
+        </div>
+      </div>
+
+      {/* Formal place name */}
+      <div>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
+          <input
+            type='text'
+            id='formalPlaceName'
+            value={formalPlaceName}
+            onChange={(e) => setFormalPlaceName(e.target.value)}
+            placeholder='الاسم الرسمي للمكان'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+            style={{ direction: 'rtl' }}
+          />
+        </div>
+      </div>
+
+      {/* Street */}
+      <div>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
+          <input
+            type='text'
+            id='street'
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            placeholder='الشارع (مطلوب)'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+            style={{ direction: 'rtl' }}
+            required
+          />
+          <div className='absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'>
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Side */}
+      <div>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
+          <input
+            type='text'
+            id='side'
+            value={side}
+            onChange={(e) => setSide(e.target.value)}
+            placeholder='الجانب'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+            style={{ direction: 'rtl' }}
+          />
+          <div className='absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'>
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Category */}
+      <div>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
           <select
             id='category'
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base focus:outline-none focus:ring-2 focus:ring-gray-600 appearance-none'
+            style={{ direction: 'rtl' }}
             required>
-            <option value=''>Select</option>
+            <option value=''>التصنيف</option>
             {CATEGORIES.map((cat) => (
               <option key={cat} value={cat}>
                 {cat}
               </option>
             ))}
           </select>
+          <div className='absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'>
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Belongs to route (optional) */}
+      {/* Belongs to route */}
       <div>
-        <label
-          htmlFor='belongsToRoute'
-          className='block text-sm font-medium text-gray-700 mb-1'>
-          Belongs to route (optional)
-        </label>
-        <select
-          id='belongsToRoute'
-          value={belongsToRoute}
-          onChange={(e) => setBelongsToRoute(e.target.value)}
-          className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'>
-          <option value=''>Please select</option>
-          {ROUTES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
+          <input
+            type='text'
+            id='belongsToRoute'
+            value={belongsToRoute}
+            onChange={(e) => setBelongsToRoute(e.target.value)}
+            placeholder='ينتمي إلى مسار'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+            style={{ direction: 'rtl' }}
+          />
+          <div className='absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'>
+            <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M19 9l-7 7-7-7' />
+            </svg>
+          </div>
+        </div>
       </div>
 
-      {/* 6) Photo (required) */}
-      <div>
-        <label htmlFor='images' className='block text-sm font-medium text-gray-700 mb-1'>
-          6) Photo (required)
-        </label>
-        <div className='flex items-start gap-4'>
-          <label
-            htmlFor='images'
-            className='inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 text-sm font-medium text-gray-700'>
-            <span className='text-blue-600 text-lg'>+</span> Add photo
-          </label>
+      {/* Photo Upload and Confidence */}
+      <div className='flex gap-3 items-start'>
+        {/* Upload Button */}
+        <label
+          htmlFor='images'
+          className='flex-shrink-0 w-32 h-32 bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750'>
+          <svg className='w-10 h-10 text-gray-400 mb-2' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' />
+          </svg>
+          <span className='text-gray-400 text-sm'>رفع صورة</span>
           <input
             type='file'
             id='images'
@@ -460,83 +494,64 @@ export default function MapPage() {
             onChange={handleImageChange}
             className='hidden'
           />
-          <div className='flex flex-col gap-1'>
-            <label className='flex items-center gap-2 text-sm text-gray-700'>
-              <input
-                type='radio'
-                name='photoConfidence'
-                value='100'
-                checked={photoConfidence === '100'}
-                onChange={() => setPhotoConfidence('100')}
-                className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-              />
-              100% sure
-            </label>
-            <label className='flex items-center gap-2 text-sm text-gray-700'>
-              <input
-                type='radio'
-                name='photoConfidence'
-                value='90'
-                checked={photoConfidence === '90'}
-                onChange={() => setPhotoConfidence('90')}
-                className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-              />
-              90% or less sure
-            </label>
-          </div>
+          {images.length > 0 && (
+            <span className='text-xs text-gray-500 mt-1'>({images.length})</span>
+          )}
+        </label>
+
+        {/* Confidence Radio Buttons */}
+        <div className='flex-1 flex flex-col gap-3'>
+          <label className='flex items-center gap-3 cursor-pointer'>
+            <input
+              type='radio'
+              name='photoConfidence'
+              value='100'
+              checked={photoConfidence === '100'}
+              onChange={() => setPhotoConfidence('100')}
+              className='w-6 h-6 text-white bg-gray-800 border-gray-600 focus:ring-2 focus:ring-gray-600'
+            />
+            <span className='text-white text-base'>متأكد 100%</span>
+          </label>
+          <label className='flex items-center gap-3 cursor-pointer'>
+            <input
+              type='radio'
+              name='photoConfidence'
+              value='90'
+              checked={photoConfidence === '90'}
+              onChange={() => setPhotoConfidence('90')}
+              className='w-6 h-6 text-white bg-gray-800 border-gray-600 focus:ring-2 focus:ring-gray-600'
+            />
+            <span className='text-white text-base'>متأكد 90% أو أقل</span>
+          </label>
         </div>
-        {images.length > 0 && (
-          <p className='mt-2 text-xs text-gray-600'>{images.length} file(s) selected</p>
-        )}
       </div>
 
-      {/* 8) Notes */}
+      {/* Notes */}
       <div>
-        <label htmlFor='notes' className='block text-sm font-medium text-gray-700 mb-1'>
-          8) Notes
-        </label>
-        <input
-          type='text'
-          id='notes'
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder='e.g. Under the bridge – Baramkeh Side'
-          className='w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm text-gray-900 bg-white'
-        />
-      </div>
-
-      {/* New point / Edit existing point */}
-      <div className='flex items-center gap-6'>
-        <label className='flex items-center gap-2 text-sm text-gray-700'>
+        <div className='relative'>
+          <div className='absolute right-4 top-1/2 -translate-y-1/2 text-gray-400'>
+            <svg className='w-6 h-6' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+              <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z' />
+            </svg>
+          </div>
           <input
-            type='radio'
-            name='pointType'
-            value='new'
-            checked={pointType === 'new'}
-            onChange={() => setPointType('new')}
-            className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
+            type='text'
+            id='notes'
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder='ملاحظة'
+            className='w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+            style={{ direction: 'rtl' }}
           />
-          New point
-        </label>
-        <label className='flex items-center gap-2 text-sm text-gray-700'>
-          <input
-            type='radio'
-            name='pointType'
-            value='edit'
-            checked={pointType === 'edit'}
-            onChange={() => setPointType('edit')}
-            className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300'
-          />
-          Edit existing point
-        </label>
+        </div>
       </div>
 
       {message && (
         <div
-          className={`p-3 rounded-lg text-sm ${
+          className={`p-4 rounded-2xl text-base ${
             message.type === 'success'
-              ? 'bg-green-50 text-green-800 border border-green-200'
-              : 'bg-red-50 text-red-800 border border-red-200'
+              ? 'bg-green-900/50 text-green-200 border border-green-800'
+              : 'bg-red-900/50 text-red-200 border border-red-800'
           }`}>
           {message.text}
         </div>
@@ -545,28 +560,62 @@ export default function MapPage() {
       <button
         type='submit'
         disabled={isSubmitting || !selectedLocation}
-        className='w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-sm'>
-        {isSubmitting ? 'Saving...' : 'Save'}
+        className='w-full bg-gray-800 text-white py-5 px-6 rounded-[28px] text-lg font-semibold border border-gray-700 hover:bg-gray-750 focus:outline-none focus:ring-2 focus:ring-gray-600 disabled:bg-gray-900 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors'>
+        {isSubmitting ? 'جاري الحفظ...' : 'حفظ'}
       </button>
     </form>
   );
 
+  // Drag handlers for bottom sheet
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setDragStartY(e.touches[0].clientY);
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    setDragCurrentY(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    const dragDistance = dragCurrentY - dragStartY;
+    if (dragDistance > 100) {
+      setIsBottomSheetOpen(false);
+    }
+    setIsDragging(false);
+    setDragCurrentY(0);
+    setDragStartY(0);
+  };
+
   return (
-    <div className='h-screen flex flex-col md:flex-row overflow-hidden'>
+    <div className='h-screen flex flex-col md:flex-row overflow-hidden bg-gray-900'>
       {/* Desktop Sidebar */}
-      <div className='hidden md:flex md:w-96 bg-white shadow-lg flex-col flex-shrink-0'>
-        <div className='p-4 border-b border-gray-200 flex items-center justify-between'>
-          <div>
-            <h1 className='text-xl font-bold text-gray-900'>Add Location</h1>
-            <p className='text-xs text-gray-600'>Click on the map to select</p>
+      <div className='hidden md:flex md:w-96 bg-gray-900 shadow-lg flex-col shrink-0 border-r border-gray-800'>
+        <div className='p-6 border-b border-gray-800'>
+          <h1 className='text-xl font-bold text-white text-center mb-2'>نظام تجميع النقاط</h1>
+          <div className='flex gap-2'>
+            <button
+              onClick={() => setPointType('new')}
+              className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
+                pointType === 'new'
+                  ? 'bg-gray-700 text-white border border-gray-600'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700'
+              }`}>
+              نقطة جديدة
+            </button>
+            <button
+              onClick={() => setPointType('edit')}
+              className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
+                pointType === 'edit'
+                  ? 'bg-gray-700 text-white border border-gray-600'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700'
+              }`}>
+              تعديل نقطة
+            </button>
           </div>
-          <button
-            onClick={() => router.push('/dashboard')}
-            className='text-sm text-blue-600 hover:text-blue-700'>
-            Dashboard
-          </button>
         </div>
-        <div className='flex-1 overflow-y-auto p-4'>
+        <div className='flex-1 overflow-y-auto p-4 bg-gray-900'>
           {formContent}
         </div>
       </div>
@@ -576,28 +625,46 @@ export default function MapPage() {
         <div ref={mapRef} className='w-full h-full' />
 
         {/* Mobile Header */}
-        <div className='md:hidden absolute top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-sm z-10'>
-          <div className='flex items-center justify-between p-3'>
-            <h1 className='text-lg font-bold text-gray-900'>Add Location</h1>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className='text-sm text-blue-600 hover:text-blue-700 font-medium'>
-              Dashboard
-            </button>
+        <div className='md:hidden absolute top-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm shadow-sm z-10 border-b border-gray-800'>
+          <div className='p-4'>
+            <input
+              type='text'
+              placeholder='بحث عن موقع'
+              className='w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600'
+              dir='rtl'
+            />
+            <h2 className='text-xl font-bold text-white text-center mt-4 mb-3'>
+              نظام تجميع النقاط
+            </h2>
+            <div className='flex gap-2'>
+              <button
+                onClick={() => setPointType('new')}
+                className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
+                  pointType === 'new'
+                    ? 'bg-gray-700 text-white border border-gray-600'
+                    : 'bg-gray-800 text-gray-400 border border-gray-700'
+                }`}>
+                نقطة جديدة
+              </button>
+              <button
+                onClick={() => setPointType('edit')}
+                className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
+                  pointType === 'edit'
+                    ? 'bg-gray-700 text-white border border-gray-600'
+                    : 'bg-gray-800 text-gray-400 border border-gray-700'
+                }`}>
+                تعديل نقطة
+              </button>
+            </div>
           </div>
-          {!selectedLocation && (
-            <p className='px-3 pb-3 text-xs text-gray-600'>
-              Tap on the map to select a location
-            </p>
-          )}
         </div>
 
         {/* Mobile: Selected Location Indicator */}
         {isMobile && selectedLocation && !isBottomSheetOpen && (
           <button
             onClick={() => setIsBottomSheetOpen(true)}
-            className='absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg font-medium z-10 flex items-center gap-2'>
-            <span>Add Details</span>
+            className='absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg font-medium z-10 flex items-center gap-2 border border-gray-700'>
+            <span>إضافة التفاصيل</span>
             <svg
               xmlns='http://www.w3.org/2000/svg'
               className='h-5 w-5'
@@ -619,48 +686,29 @@ export default function MapPage() {
           {/* Backdrop */}
           {isBottomSheetOpen && (
             <div
-              className='fixed inset-0 bg-black/50 z-40'
+              className='fixed inset-0 bg-black/70 z-40'
               onClick={() => setIsBottomSheetOpen(false)}
             />
           )}
 
           {/* Bottom Sheet */}
           <div
-            className={`fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 transform transition-transform duration-300 ease-out ${
+            className={`fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl shadow-2xl z-50 transform transition-transform duration-300 ease-out ${
               isBottomSheetOpen ? 'translate-y-0' : 'translate-y-full'
             }`}
-            style={{ maxHeight: '85vh' }}>
+            style={{ maxHeight: '85vh' }}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}>
             {/* Handle */}
-            <div className='flex justify-center pt-3 pb-2'>
-              <div className='w-12 h-1.5 bg-gray-300 rounded-full' />
-            </div>
-
-            {/* Header */}
-            <div className='flex items-center justify-between px-4 pb-3 border-b border-gray-200'>
-              <h2 className='text-lg font-semibold text-gray-900'>Location Details</h2>
-              <button
-                onClick={resetForm}
-                className='text-gray-500 hover:text-gray-700 p-1'>
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  className='h-6 w-6'
-                  fill='none'
-                  viewBox='0 0 24 24'
-                  stroke='currentColor'>
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M6 18L18 6M6 6l12 12'
-                  />
-                </svg>
-              </button>
+            <div className='flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing'>
+              <div className='w-12 h-1.5 bg-gray-700 rounded-full' />
             </div>
 
             {/* Content */}
             <div
-              className='overflow-y-auto p-4'
-              style={{ maxHeight: 'calc(85vh - 80px)' }}>
+              className='overflow-y-auto p-4 bg-gray-900'
+              style={{ maxHeight: 'calc(85vh - 20px)' }}>
               {formContent}
             </div>
           </div>
