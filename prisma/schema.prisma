@@ -30,12 +30,30 @@ model Location {
 }
 
 model User {
-  id          String   @id @default(cuid())
-  name        String
-  email       String   @unique
-  password    String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  locations   Location[]
-  role        String   @default("USER")
+  id        String     @id @default(cuid())
+  name      String
+  email     String     @unique
+  password  String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  locations Location[]
+  role      String     @default("USER")
+}
+
+model City {
+  id            String         @id @default(cuid())
+  nameAr        String
+  nameEn        String
+  governorate   String // e.g., "Damascus", "Aleppo"
+  createdAt     DateTime       @default(now())
+  neighborhoods Neighborhood[]
+}
+
+model Neighborhood {
+  id        String   @id @default(cuid())
+  nameAr    String
+  nameEn    String?
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 }
