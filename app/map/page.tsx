@@ -294,7 +294,7 @@ export default function MapPage() {
 
   if (!user) return null;
 
-  const FormContent = () => (
+  const formContent = (
     <form onSubmit={handleSubmit} className='space-y-4'>
       {selectedLocation && (
         <div className='p-3 bg-blue-50 rounded-lg border border-blue-200'>
@@ -567,7 +567,7 @@ export default function MapPage() {
           </button>
         </div>
         <div className='flex-1 overflow-y-auto p-4'>
-          <FormContent />
+          {formContent}
         </div>
       </div>
 
@@ -661,7 +661,7 @@ export default function MapPage() {
             <div
               className='overflow-y-auto p-4'
               style={{ maxHeight: 'calc(85vh - 80px)' }}>
-              <FormContent />
+              {formContent}
             </div>
           </div>
         </>
