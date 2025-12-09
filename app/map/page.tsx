@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { Sheet } from "react-modal-sheet";
+import "../modal-sheet.css";
 
 declare global {
   interface Window {
@@ -83,9 +85,6 @@ function MapPageContent() {
   // Mobile bottom sheet state
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [dragStartY, setDragStartY] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [sheetHeight, setSheetHeight] = useState(30); // Percentage of viewport height
 
   // Stats state
   const [stats, setStats] = useState({
@@ -171,7 +170,6 @@ function MapPageContent() {
               // Open bottom sheet on mobile
               if (window.innerWidth < 768) {
                 setIsBottomSheetOpen(true);
-                setSheetHeight(30);
               }
             }
           }
@@ -189,25 +187,6 @@ function MapPageContent() {
       loadLocationForEdit();
     }
   }, [editLocationId, user]);
-
-  // Get user's current location
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const userLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setSelectedLocation(userLocation);
-        },
-        (error) => {
-          console.log("Error getting location:", error);
-          // Fallback to Damascus if location access is denied
-        }
-      );
-    }
-  }, []);
 
   // Initialize Google Maps
   useEffect(() => {
@@ -252,52 +231,33 @@ function MapPageContent() {
             mapTypeId: "hybrid",
             mapTypeControl: false,
             fullscreenControl: false,
+            gestureHandling: "greedy", // Allow single-finger dragging on mobile
             language: "ar", // Arabic language
           });
 
           setMap(mapInstance);
 
-          // Add a blue dot marker for current location
-          if (center.lat !== 33.5138 || center.lng !== 36.2765) {
-            new window.google.maps.Marker({
-              position: center,
-              map: mapInstance,
-              title: "موقعك الحالي",
-              icon: {
-                path: window.google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: "#4285F4",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2,
-              },
-            });
-          }
+          // Set initial selectedLocation to map center
+          setSelectedLocation({
+            lat: center.lat,
+            lng: center.lng,
+          });
 
-          mapInstance.addListener("click", (e: google.maps.MapMouseEvent) => {
-            if (e.latLng) {
-              const lat = e.latLng.lat();
-              const lng = e.latLng.lng();
-              setSelectedLocation({ lat, lng });
-
-              if (markerRef.current) {
-                markerRef.current.setMap(null);
-              }
-
-              const newMarker = new window.google.maps.Marker({
-                position: { lat, lng },
-                map: mapInstance,
-                title: "الموقع المحدد",
-                animation: window.google.maps.Animation.DROP,
+          // Update selectedLocation when map center changes (drag)
+          mapInstance.addListener("center_changed", () => {
+            const mapCenter = mapInstance.getCenter();
+            if (mapCenter) {
+              setSelectedLocation({
+                lat: mapCenter.lat(),
+                lng: mapCenter.lng(),
               });
+            }
+          });
 
-              markerRef.current = newMarker;
-
-              // Open bottom sheet on mobile when location is selected
-              if (window.innerWidth < 768) {
-                setIsBottomSheetOpen(true);
-                setSheetHeight(30); // Reset to default height when opening
-              }
+          // Open bottom sheet on mobile when map is first clicked/dragged
+          mapInstance.addListener("dragstart", () => {
+            if (window.innerWidth < 768 && !isBottomSheetOpen) {
+              setIsBottomSheetOpen(true);
             }
           });
         });
@@ -307,30 +267,14 @@ function MapPageContent() {
     if (user) {
       initMap();
     }
-  }, [user]);
+  }, [user, isBottomSheetOpen]);
 
-  // Update marker when selectedLocation changes (for edit mode)
+  // When editing, center map on the location
   useEffect(() => {
-    if (map && selectedLocation) {
-      // Remove existing marker
-      if (markerRef.current) {
-        markerRef.current.setMap(null);
-      }
-
-      // Add new marker at selected location
-      const newMarker = new window.google.maps.Marker({
-        position: { lat: selectedLocation.lat, lng: selectedLocation.lng },
-        map: map,
-        title: "الموقع المحدد",
-        animation: window.google.maps.Animation.DROP,
-      });
-
-      markerRef.current = newMarker;
-
-      // Center map on selected location without changing zoom
+    if (map && selectedLocation && isEditMode) {
       map.setCenter({ lat: selectedLocation.lat, lng: selectedLocation.lng });
     }
-  }, [map, selectedLocation]);
+  }, [map, selectedLocation, isEditMode]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -894,50 +838,6 @@ function MapPageContent() {
     </form>
   );
 
-  // Drag handlers for bottom sheet with snap points
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setDragStartY(e.touches[0].clientY);
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return;
-    const currentY = e.touches[0].clientY;
-    const dragDistance = currentY - dragStartY;
-    const windowHeight = window.innerHeight;
-
-    // Calculate new height based on drag
-    const newHeightPercent = sheetHeight - (dragDistance / windowHeight) * 100;
-
-    // Clamp between 20% and 85%
-    const clampedHeight = Math.max(20, Math.min(85, newHeightPercent));
-    setSheetHeight(clampedHeight);
-  };
-
-  const handleTouchEnd = () => {
-    if (!isDragging) return;
-
-    // Snap to nearest point: 85%, 50%, 30%, 20%, or close
-    const snapPoints = [85, 50, 30, 20];
-
-    if (sheetHeight < 15) {
-      // Close if dragged below 15%
-      setIsBottomSheetOpen(false);
-      setSheetHeight(85);
-    } else {
-      // Find nearest snap point
-      const nearest = snapPoints.reduce((prev, curr) =>
-        Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight)
-          ? curr
-          : prev
-      );
-      setSheetHeight(nearest);
-    }
-
-    setIsDragging(false);
-    setDragStartY(0);
-  };
-
   return (
     <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-gray-900">
       {/* Desktop Sidebar */}
@@ -1023,6 +923,64 @@ function MapPageContent() {
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" />
 
+        {/* Fixed Center Marker/Crosshair */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full pointer-events-none z-20">
+          <svg
+            width="40"
+            height="56"
+            viewBox="0 0 40 56"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="drop-shadow-2xl"
+          >
+            {/* Map pin shape with gradient */}
+            <defs>
+              <radialGradient id="pinGradient" cx="50%" cy="30%">
+                <stop offset="0%" stopColor="#EF4444" />
+                <stop offset="50%" stopColor="#DC2626" />
+                <stop offset="100%" stopColor="#B91C1C" />
+              </radialGradient>
+              <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+                <feOffset dx="0" dy="2" result="offsetblur"/>
+                <feComponentTransfer>
+                  <feFuncA type="linear" slope="0.3"/>
+                </feComponentTransfer>
+                <feMerge>
+                  <feMergeNode/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
+            
+            {/* Pin body */}
+            <path
+              d="M20 0C11.163 0 4 7.163 4 16C4 28 20 52 20 52C20 52 36 28 36 16C36 7.163 28.837 0 20 0Z"
+              fill="url(#pinGradient)"
+              stroke="white"
+              strokeWidth="2"
+              filter="url(#shadow)"
+            />
+            
+            {/* Inner white circle */}
+            <circle 
+              cx="20" 
+              cy="15" 
+              r="6" 
+              fill="white" 
+              opacity="0.95"
+            />
+            
+            {/* Inner red dot */}
+            <circle 
+              cx="20" 
+              cy="15" 
+              r="3" 
+              fill="#DC2626"
+            />
+          </svg>
+        </div>
+
         {/* Mobile Header */}
         <div className="md:hidden absolute top-0 left-0 right-0 bg-transparent backdrop-blur-sm shadow-sm z-10 border-b border-gray-800/30">
           <div className="p-4">
@@ -1070,11 +1028,13 @@ function MapPageContent() {
           </div>
         </div>
 
-        {/* Mobile: Selected Location Indicator */}
-        {isMobile && selectedLocation && !isBottomSheetOpen && (
+        {/* Mobile: Add Details Button */}
+        {isMobile && !isBottomSheetOpen && (
           <button
-            onClick={() => setIsBottomSheetOpen(true)}
-            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg font-medium z-10 flex items-center gap-2 border border-gray-700"
+            onClick={() => {
+              setIsBottomSheetOpen(true);
+            }}
+            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-lg font-medium z-10 flex items-center gap-2 border border-red-600"
           >
             <span>إضافة التفاصيل</span>
             <svg
@@ -1095,111 +1055,96 @@ function MapPageContent() {
 
       {/* Mobile Bottom Sheet */}
       {isMobile && (
-        <>
-          {/* Backdrop */}
-          {isBottomSheetOpen && (
-            <div
-              className="fixed inset-0 -z-20"
-              onClick={() => {
-                setSelectedLocation(null);
-                if (markerRef.current) {
-                  markerRef.current.setMap(null);
-                  markerRef.current = null;
-                }
-                setIsBottomSheetOpen(false);
-              }}
-            />
-          )}
-
-          {/* Bottom Sheet */}
-          <div
-            className={`fixed bottom-0 left-0 right-0 bg-gray-900 rounded-t-3xl shadow-2xl z-50 transition-all duration-300 ease-out ${
-              isBottomSheetOpen ? "" : "translate-y-full"
-            }`}
-            style={{
-              height: isBottomSheetOpen ? `${sheetHeight}vh` : "0vh",
-              transform: isBottomSheetOpen
-                ? "translateY(0)"
-                : "translateY(100%)",
-            }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-          >
-            {/* Header with Close Button */}
-            <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-gray-800">
-              <button
-                onClick={() => {
-                  setSelectedLocation(null);
-                  if (markerRef.current) {
-                    markerRef.current.setMap(null);
-                    markerRef.current = null;
-                  }
-                  setIsBottomSheetOpen(false);
-                }}
-                className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
-              >
-                <svg
-                  className="w-5 h-5 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+        <Sheet
+          isOpen={isBottomSheetOpen}
+          onClose={() => {
+            setSelectedLocation(null);
+            if (markerRef.current) {
+              markerRef.current.setMap(null);
+              markerRef.current = null;
+            }
+            setIsBottomSheetOpen(false);
+          }}
+          snapPoints={[0.85, 0.5, 0.3, 0.2]}
+          initialSnap={2}
+        >
+          <Sheet.Container style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
+            <Sheet.Header style={{ backgroundColor: 'rgb(17, 24, 39)', borderBottom: '1px solid rgb(31, 41, 55)' }}>
+              <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                <button
+                  onClick={() => {
+                    setSelectedLocation(null);
+                    if (markerRef.current) {
+                      markerRef.current.setMap(null);
+                      markerRef.current = null;
+                    }
+                    setIsBottomSheetOpen(false);
+                  }}
+                  className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-              <div className="flex-1 flex justify-center">
-                <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
+                  <svg
+                    className="w-5 h-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+                <div className="flex-1 flex justify-center">
+                  <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
+                </div>
+                <div className="w-10 h-10" /> {/* Spacer for centering */}
               </div>
-              <div className="w-10 h-10" /> {/* Spacer for centering */}
-            </div>
+            </Sheet.Header>
+            <Sheet.Content style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
+              <div className="overflow-y-auto">
+                {/* Stats Section */}
+                <div className="px-4 pb-3 border-b border-gray-800">
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
+                      <div className="text-2xl font-bold text-white">
+                        {stats.total}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">المجموع</div>
+                    </div>
+                    <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
+                      <div className="text-2xl font-bold text-green-400">
+                        {stats.approved}
+                      </div>
+                      <div className="text-xs text-green-400 mt-1">موافق</div>
+                    </div>
+                    <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
+                      <div className="text-2xl font-bold text-red-400">
+                        {stats.rejected}
+                      </div>
+                      <div className="text-xs text-red-400 mt-1">مرفوض</div>
+                    </div>
+                    <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
+                      <div className="text-2xl font-bold text-yellow-400">
+                        {stats.pending}
+                      </div>
+                      <div className="text-xs text-yellow-400 mt-1">
+                        قيد الانتظار
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-            {/* Stats Section */}
-            <div className="px-4 pb-3 border-b border-gray-800">
-              <div className="grid grid-cols-4 gap-2">
-                <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
-                  <div className="text-2xl font-bold text-white">
-                    {stats.total}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">المجموع</div>
-                </div>
-                <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
-                  <div className="text-2xl font-bold text-green-400">
-                    {stats.approved}
-                  </div>
-                  <div className="text-xs text-green-400 mt-1">موافق</div>
-                </div>
-                <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
-                  <div className="text-2xl font-bold text-red-400">
-                    {stats.rejected}
-                  </div>
-                  <div className="text-xs text-red-400 mt-1">مرفوض</div>
-                </div>
-                <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
-                  <div className="text-2xl font-bold text-yellow-400">
-                    {stats.pending}
-                  </div>
-                  <div className="text-xs text-yellow-400 mt-1">
-                    قيد الانتظار
-                  </div>
+                {/* Content */}
+                <div className="p-4 bg-gray-900">
+                  {formContent}
                 </div>
               </div>
-            </div>
-
-            {/* Content */}
-            <div
-              className="overflow-y-auto p-4 bg-gray-900"
-              style={{ height: "calc(100% - 120px)" }}
-            >
-              {formContent}
-            </div>
-          </div>
-        </>
+            </Sheet.Content>
+          </Sheet.Container>
+          <Sheet.Backdrop />
+        </Sheet>
       )}
     </div>
   );

@@ -1,0 +1,22 @@
+/* Custom styles for react-modal-sheet */
+.react-modal-sheet-backdrop {
+  background-color: transparent !important;
+}
+
+.react-modal-sheet-container {
+  background-color: rgb(17, 24, 39) !important;
+  border-top-left-radius: 1.5rem !important;
+  border-top-right-radius: 1.5rem !important;
+}
+
+.react-modal-sheet-header {
+  background-color: rgb(17, 24, 39) !important;
+}
+
+.react-modal-sheet-drag-indicator {
+  background-color: rgb(55, 65, 81) !important;
+}
+
+.react-modal-sheet-content {
+  background-color: rgb(17, 24, 39) !important;
+}
