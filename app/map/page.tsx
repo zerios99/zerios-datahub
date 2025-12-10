@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Sheet } from "react-modal-sheet";
+import Image from "next/image";
 import "../modal-sheet.css";
 
 declare global {
@@ -925,60 +926,15 @@ function MapPageContent() {
 
         {/* Fixed Center Marker/Crosshair */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full pointer-events-none z-20">
-          <svg
-            width="40"
-            height="56"
-            viewBox="0 0 40 56"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
+          <Image
+            src="/mapPin.svg"
+            alt="Map Pin"
+            width={42}
+            height={66}
             className="drop-shadow-2xl"
-          >
-            {/* Map pin shape with gradient */}
-            <defs>
-              <radialGradient id="pinGradient" cx="50%" cy="30%">
-                <stop offset="0%" stopColor="#EF4444" />
-                <stop offset="50%" stopColor="#DC2626" />
-                <stop offset="100%" stopColor="#B91C1C" />
-              </radialGradient>
-              <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-                <feOffset dx="0" dy="2" result="offsetblur"/>
-                <feComponentTransfer>
-                  <feFuncA type="linear" slope="0.3"/>
-                </feComponentTransfer>
-                <feMerge>
-                  <feMergeNode/>
-                  <feMergeNode in="SourceGraphic"/>
-                </feMerge>
-              </filter>
-            </defs>
-            
-            {/* Pin body */}
-            <path
-              d="M20 0C11.163 0 4 7.163 4 16C4 28 20 52 20 52C20 52 36 28 36 16C36 7.163 28.837 0 20 0Z"
-              fill="url(#pinGradient)"
-              stroke="white"
-              strokeWidth="2"
-              filter="url(#shadow)"
-            />
-            
-            {/* Inner white circle */}
-            <circle 
-              cx="20" 
-              cy="15" 
-              r="6" 
-              fill="white" 
-              opacity="0.95"
-            />
-            
-            {/* Inner red dot */}
-            <circle 
-              cx="20" 
-              cy="15" 
-              r="3" 
-              fill="#DC2626"
-            />
-          </svg>
+            priority
+            unoptimized
+          />
         </div>
 
         {/* Mobile Header */}
