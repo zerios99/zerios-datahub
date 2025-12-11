@@ -7,6 +7,9 @@
   background-color: rgb(17, 24, 39) !important;
   border-top-left-radius: 1.5rem !important;
   border-top-right-radius: 1.5rem !important;
+  /* Prevent sheet from going below 10vh */
+  min-height: 10vh !important;
+  max-height: 90vh !important;
 }
 
 .react-modal-sheet-header {

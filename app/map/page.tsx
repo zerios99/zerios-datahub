@@ -84,8 +84,42 @@ function MapPageContent() {
   ];
 
   // Mobile bottom sheet state
-  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+  const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentSnapIndex, setCurrentSnapIndex] = useState(4);
+  const sheetRef = useRef<any>(null);
+
+  // All locations and markers state
+  const [allLocations, setAllLocations] = useState<any[]>([]);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  const [selectedMarkerLocation, setSelectedMarkerLocation] =
+    useState<any>(null);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtered locations based on search
+  const filteredLocations = allLocations.filter((location) => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      location.name?.toLowerCase().includes(query) ||
+      location.city?.toLowerCase().includes(query) ||
+      location.street?.toLowerCase().includes(query) ||
+      location.category?.toLowerCase().includes(query) ||
+      location.formalPlaceName?.toLowerCase().includes(query)
+    );
+  });
+
+  // Center map on first search result when searching
+  useEffect(() => {
+    if (searchQuery.trim() && filteredLocations.length > 0 && map) {
+      const firstResult = filteredLocations[0];
+      map.panTo({ lat: firstResult.latitude, lng: firstResult.longitude });
+      map.setZoom(15);
+    }
+  }, [searchQuery, filteredLocations, map]);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -140,6 +174,80 @@ function MapPageContent() {
     }
   }, [user]);
 
+  // Fetch all locations and display as markers
+  useEffect(() => {
+    const fetchAllLocations = async () => {
+      if (!map) return;
+
+      try {
+        const response = await fetch("/api/locations");
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Fetched locations:", data.locations);
+          setAllLocations(data.locations || []);
+        }
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+
+    if (map && user) {
+      fetchAllLocations();
+    }
+  }, [map, user]);
+
+  // Create markers for all locations
+  useEffect(() => {
+    if (!map || allLocations.length === 0) {
+      console.log(
+        "Skipping markers - map:",
+        !!map,
+        "locations:",
+        allLocations.length
+      );
+      return;
+    }
+
+    console.log("Creating markers for", filteredLocations.length, "locations (filtered from", allLocations.length, ")");
+
+    // Clear existing markers
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
+
+    // Create markers for each filtered location
+    filteredLocations.forEach((location) => {
+      const marker = new window.google.maps.Marker({
+        position: { lat: location.latitude, lng: location.longitude },
+        map: map,
+        title: location.name,
+        icon: {
+          url: "/mapPin.svg",
+          scaledSize: new window.google.maps.Size(30, 47),
+          anchor: new window.google.maps.Point(15, 47),
+        },
+      });
+
+      // Add click listener to show location info
+      marker.addListener("click", () => {
+        console.log("Marker clicked:", location);
+        setSelectedMarkerLocation(location);
+        setIsBottomSheetOpen(true);
+        // Center map on clicked marker
+        if (map) {
+          map.panTo({ lat: location.latitude, lng: location.longitude });
+        }
+      });
+
+      markersRef.current.push(marker);
+    });
+
+    // Cleanup on unmount
+    return () => {
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
+    };
+  }, [map, filteredLocations]);
+
   // Load location data when editing
   useEffect(() => {
     const loadLocationForEdit = async () => {
@@ -159,19 +267,21 @@ function MapPageContent() {
               // Pre-populate form fields
               setPopularPlaceName(location.name);
               setCity(location.city);
-              setCategory(location.category);
+              setCategory(location.category || "");
+              setFormalPlaceName(location.formalPlaceName || "");
+              setStreet(location.street || "");
+              setSide(location.side || "");
+              setBelongsToRoute(location.belongsToRoute || "");
+              setNotes(location.notes || "");
+              setPhotoConfidence(location.photoConfidence || "100");
+              setPointType((location.pointType as "new" | "edit") || "edit");
               setSelectedLocation({
                 lat: location.latitude,
                 lng: location.longitude,
               });
 
-              // Set point type to edit
-              setPointType("edit");
-
-              // Open bottom sheet on mobile
-              if (window.innerWidth < 768) {
-                setIsBottomSheetOpen(true);
-              }
+              // Note: Images cannot be pre-loaded as they are S3 URLs, not File objects
+              // User will need to re-upload images if they want to change them
             }
           }
         } catch (error) {
@@ -244,8 +354,8 @@ function MapPageContent() {
             lng: center.lng,
           });
 
-          // Update selectedLocation when map center changes (drag)
-          mapInstance.addListener("center_changed", () => {
+          // Update selectedLocation when map drag ends (not on every center change)
+          mapInstance.addListener("dragend", () => {
             const mapCenter = mapInstance.getCenter();
             if (mapCenter) {
               setSelectedLocation({
@@ -336,11 +446,6 @@ function MapPageContent() {
       return;
     }
 
-    if (images.length === 0 && !isEditMode) {
-      setMessage({ type: "error", text: "Please add at least one photo" });
-      return;
-    }
-
     setIsSubmitting(true);
     setMessage(null);
 
@@ -396,6 +501,18 @@ function MapPageContent() {
           : "Location saved successfully! It will be reviewed by admin.",
       });
 
+      // Reset edit mode and selected marker
+      setIsEditMode(false);
+      setEditingLocationId(null);
+      setSelectedMarkerLocation(null);
+
+      // Refetch locations to show updated marker
+      const locationsResponse = await fetch("/api/locations");
+      if (locationsResponse.ok) {
+        const data = await locationsResponse.json();
+        setAllLocations(data.locations || []);
+      }
+
       // Reset form and redirect after a delay
       setTimeout(() => {
         router.push("/dashboard");
@@ -442,33 +559,89 @@ function MapPageContent() {
 
   if (!user) return null;
 
-  const formContent = (
+  // Show form only if not viewing another user's location
+  const showForm =
+    !selectedMarkerLocation || selectedMarkerLocation.userId === user.id;
+
+  const formContent = showForm ? (
     <form onSubmit={handleSubmit} className="space-y-3 text-base" dir="rtl">
-      <h2 className="text-xl font-bold text-white text-center mt-4 mb-3">
-        {isEditMode ? "تعديل الموقع" : "نظام تجميع النقاط"}
-      </h2>
-      <div className="flex gap-2">
-        <button
-          onClick={() => setPointType("new")}
-          className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-            pointType === "new"
-              ? "bg-gray-700 text-white border border-gray-600"
-              : "bg-gray-800 text-gray-400 border border-gray-700"
-          }`}
-        >
-          نقطة جديدة
-        </button>
-        <button
-          onClick={() => setPointType("edit")}
-          className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-            pointType === "edit"
-              ? "bg-gray-700 text-white border border-gray-600"
-              : "bg-gray-800 text-gray-400 border border-gray-700"
-          }`}
-        >
-          تعديل نقطة
-        </button>
+      <div className="flex items-center justify-between mt-4 mb-3">
+        <h2 className="text-xl font-bold text-white text-center flex-1">
+          {isEditMode ? "تعديل الموقع" : "نظام تجميع النقاط"}
+        </h2>
+        {isEditMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setIsEditMode(false);
+              setEditingLocationId(null);
+              setCity("");
+              setPopularPlaceName("");
+              setFormalPlaceName("");
+              setStreet("");
+              setSide("");
+              setCategory("");
+              setBelongsToRoute("");
+              setImages([]);
+              setPhotoConfidence("100");
+              setNotes("");
+              setPointType("new");
+              setMessage(null);
+            }}
+            className="w-8 h-8 bg-red-600 text-white rounded-full flex items-center justify-center hover:bg-red-700 transition-colors"
+            title="إلغاء التعديل"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
+
+      {isEditMode && (
+        <div className="bg-blue-900/30 border border-blue-700 rounded-2xl p-3 text-center">
+          <p className="text-blue-300 text-sm">
+            🔄 وضع التعديل - تحرير الموقع الحالي
+          </p>
+        </div>
+      )}
+
+      {!isEditMode && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setPointType("new")}
+            className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
+              pointType === "new"
+                ? "bg-gray-700 text-white border border-gray-600"
+                : "bg-gray-800 text-gray-400 border border-gray-700"
+            }`}
+          >
+            نقطة جديدة
+          </button>
+          <button
+            type="button"
+            onClick={() => setPointType("edit")}
+            className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
+              pointType === "edit"
+                ? "bg-gray-700 text-white border border-gray-600"
+                : "bg-gray-800 text-gray-400 border border-gray-700"
+            }`}
+          >
+            تعديل نقطة
+          </button>
+        </div>
+      )}
 
       {/* City */}
       <div>
@@ -725,66 +898,129 @@ function MapPageContent() {
       </div>
 
       {/* Photo Upload and Confidence */}
-      <div className="flex gap-3 items-start">
-        {/* Upload Button */}
-        <label
-          htmlFor="images"
-          className="flex-shrink-0 w-32 h-32 bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750"
-        >
-          <svg
-            className="w-10 h-10 text-gray-400 mb-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-3 items-start">
+          {/* Upload Button */}
+          <label
+            htmlFor="images"
+            className="shrink-0 w-32 h-32 bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 relative overflow-hidden"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            {images.length > 0 ? (
+              <>
+                <img
+                  src={URL.createObjectURL(images[0])}
+                  alt="Selected"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
+                  <svg
+                    className="w-8 h-8 text-white mb-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                    />
+                  </svg>
+                  <span className="text-white text-xs font-medium">
+                    ({images.length})
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-10 h-10 text-gray-400 mb-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span className="text-gray-400 text-sm">رفع صورة</span>
+              </>
+            )}
+            <input
+              type="file"
+              id="images"
+              multiple
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
             />
-          </svg>
-          <span className="text-gray-400 text-sm">رفع صورة</span>
-          <input
-            type="file"
-            id="images"
-            multiple
-            accept="image/*"
-            onChange={handleImageChange}
-            className="hidden"
-          />
-          {images.length > 0 && (
-            <span className="text-xs text-gray-500 mt-1">
-              ({images.length})
-            </span>
-          )}
-        </label>
+          </label>
 
-        {/* Confidence Radio Buttons */}
-        <div className="flex-1 flex flex-col gap-3">
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="photoConfidence"
-              value="100"
-              checked={photoConfidence === "100"}
-              onChange={() => setPhotoConfidence("100")}
-              className="w-6 h-6 text-white bg-gray-800 border-gray-600 focus:ring-2 focus:ring-gray-600"
-            />
-            <span className="text-white text-base">متأكد 100%</span>
-          </label>
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="radio"
-              name="photoConfidence"
-              value="90"
-              checked={photoConfidence === "90"}
-              onChange={() => setPhotoConfidence("90")}
-              className="w-6 h-6 text-white bg-gray-800 border-gray-600 focus:ring-2 focus:ring-gray-600"
-            />
-            <span className="text-white text-base">متأكد 90% أو أقل</span>
-          </label>
+          {/* Confidence Radio Buttons */}
+          <div className="flex-1 flex flex-col gap-3">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="photoConfidence"
+                value="100"
+                checked={photoConfidence === "100"}
+                onChange={() => setPhotoConfidence("100")}
+                className="w-6 h-6 text-white bg-gray-800 border-gray-600 focus:ring-2 focus:ring-gray-600"
+              />
+              <span className="text-white text-base">متأكد 100%</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="photoConfidence"
+                value="90"
+                checked={photoConfidence === "90"}
+                onChange={() => setPhotoConfidence("90")}
+                className="w-6 h-6 text-white bg-gray-800 border-gray-600 focus:ring-2 focus:ring-gray-600"
+              />
+              <span className="text-white text-base">متأكد 90% أو أقل</span>
+            </label>
+          </div>
         </div>
+
+        {/* Image Preview */}
+        {images.length > 0 && (
+          <div className="grid grid-cols-3 gap-2">
+            {images.map((image, index) => (
+              <div key={index} className="relative group">
+                <img
+                  src={URL.createObjectURL(image)}
+                  alt={`Preview ${index + 1}`}
+                  className="w-full h-24 object-cover rounded-lg border border-gray-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImages(images.filter((_, i) => i !== index));
+                  }}
+                  className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Notes */}
@@ -837,7 +1073,7 @@ function MapPageContent() {
         {isSubmitting ? "جاري الحفظ..." : isEditMode ? "تحديث الموقع" : "حفظ"}
       </button>
     </form>
-  );
+  ) : null;
 
   return (
     <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-gray-900">
@@ -849,7 +1085,9 @@ function MapPageContent() {
               <input
                 type="text"
                 placeholder="بحث عن موقع"
-                className="w-full px-4 py-3 pr-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full px-4 py-3 pr-12 bg-transparent border border-gray-700/50 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 dir="rtl"
               />
               <svg
@@ -938,14 +1176,16 @@ function MapPageContent() {
         </div>
 
         {/* Mobile Header */}
-        <div className="md:hidden absolute top-0 left-0 right-0 bg-transparent backdrop-blur-sm shadow-sm z-10 border-b border-gray-800/30">
+        <div className="md:hidden absolute top-0 left-0 right-0 bg-transparent">
           <div className="p-4">
             <div className="flex items-center gap-3 mb-4">
               <div className="relative flex-1">
                 <input
                   type="text"
                   placeholder="بحث عن موقع"
-                  className="w-full px-4 py-3 pr-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 bg-transparent border border-gray-700/50 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-600"
                   dir="rtl"
                 />
                 <svg
@@ -983,53 +1223,35 @@ function MapPageContent() {
             </div>
           </div>
         </div>
-
-        {/* Mobile: Add Details Button */}
-        {isMobile && !isBottomSheetOpen && (
-          <button
-            onClick={() => {
-              setIsBottomSheetOpen(true);
-            }}
-            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full shadow-lg font-medium z-10 flex items-center gap-2 border border-red-600"
-          >
-            <span>إضافة التفاصيل</span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        )}
       </div>
 
       {/* Mobile Bottom Sheet */}
       {isMobile && (
         <Sheet
+          ref={sheetRef}
           isOpen={isBottomSheetOpen}
           onClose={() => {
-            setSelectedLocation(null);
-            if (markerRef.current) {
-              markerRef.current.setMap(null);
-              markerRef.current = null;
-            }
-            setIsBottomSheetOpen(false);
+            // Callback required but sheet won't close due to disableDismiss
           }}
-          snapPoints={[0.85, 0.5, 0.3, 0.2]}
-          initialSnap={2}
+          onSnap={(index) => {
+            setCurrentSnapIndex(index);
+          }}
+          snapPoints={[0, 0.2, 0.3, 0.5, 0.85, 1]}
+          initialSnap={3}
+          disableDismiss={true}
         >
-          <Sheet.Container style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
-            <Sheet.Header style={{ backgroundColor: 'rgb(17, 24, 39)', borderBottom: '1px solid rgb(31, 41, 55)' }}>
+          <Sheet.Container style={{ backgroundColor: "rgb(17, 24, 39)" }}>
+            <Sheet.Header
+              style={{
+                backgroundColor: "rgb(17, 24, 39)",
+                borderBottom: "1px solid rgb(31, 41, 55)",
+              }}
+            >
               <div className="flex items-center justify-between px-4 pt-3 pb-2">
                 <button
                   onClick={() => {
                     setSelectedLocation(null);
+                    setSelectedMarkerLocation(null);
                     if (markerRef.current) {
                       markerRef.current.setMap(null);
                       markerRef.current = null;
@@ -1055,11 +1277,178 @@ function MapPageContent() {
                 <div className="flex-1 flex justify-center">
                   <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
                 </div>
-                <div className="w-10 h-10" /> {/* Spacer for centering */}
+                <div className="w-10 h-2" /> {/* Spacer for centering */}
+              </div>
+
+              {/* Coordinates Display */}
+              <div className="px-4 pb-2 text-center border-b border-gray-800">
+                <div className="flex items-center justify-center gap-4 text-sm">
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-400">Lat:</span>
+                    <span className="text-white font-mono">
+                      {selectedLocation?.lat.toFixed(6) ||
+                        map?.getCenter()?.lat().toFixed(6) ||
+                        "0.000000"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-gray-400">Lng:</span>
+                    <span className="text-white font-mono">
+                      {selectedLocation?.lng.toFixed(6) ||
+                        map?.getCenter()?.lng().toFixed(6) ||
+                        "0.000000"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </Sheet.Header>
-            <Sheet.Content style={{ backgroundColor: 'rgb(17, 24, 39)' }}>
+            <Sheet.Content style={{ backgroundColor: "rgb(17, 24, 39)" }}>
               <div className="overflow-y-auto">
+                {/* Selected Marker Location Info */}
+                {selectedMarkerLocation && (
+                  <div className="px-4 py-4 border-b border-gray-800 bg-gray-800/50">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="text-lg font-bold text-white">
+                        {selectedMarkerLocation.name || "موقع"}
+                      </h3>
+                      <button
+                        onClick={() => {
+                          setSelectedMarkerLocation(null);
+                        }}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      {selectedMarkerLocation.city && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">المدينة:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.city}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.category && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">الفئة:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.category}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.street && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">الشارع:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.street}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.status && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-400">الحالة:</span>
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              selectedMarkerLocation.status === "APPROVED"
+                                ? "bg-green-500/20 text-green-400"
+                                : selectedMarkerLocation.status === "REJECTED"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-yellow-500/20 text-yellow-400"
+                            }`}
+                          >
+                            {selectedMarkerLocation.status === "APPROVED"
+                              ? "موافق عليه"
+                              : selectedMarkerLocation.status === "REJECTED"
+                              ? "مرفوض"
+                              : "قيد المراجعة"}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.notes && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-gray-400">ملاحظات:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.notes}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Edit button - only show if user owns this location */}
+                    {selectedMarkerLocation.userId === user?.id && (
+                      <button
+                        onClick={() => {
+                          console.log(
+                            "Loading location for editing:",
+                            selectedMarkerLocation
+                          );
+
+                          // First, clear selected marker to show the form
+                          const locationToEdit = selectedMarkerLocation;
+                          setSelectedMarkerLocation(null);
+
+                          // Then load the location data after a brief delay to ensure form is visible
+                          setTimeout(() => {
+                            setIsEditMode(true);
+                            setEditingLocationId(locationToEdit.id);
+                            setCity(locationToEdit.city || "");
+                            setPopularPlaceName(locationToEdit.name || "");
+                            setFormalPlaceName(
+                              locationToEdit.formalPlaceName || ""
+                            );
+                            setStreet(locationToEdit.street || "");
+                            setSide(locationToEdit.side || "");
+                            setCategory(locationToEdit.category || "");
+                            setBelongsToRoute(
+                              locationToEdit.belongsToRoute || ""
+                            );
+                            setPhotoConfidence(
+                              (locationToEdit.photoConfidence || "100") as
+                                | "100"
+                                | "90"
+                            );
+                            setNotes(locationToEdit.notes || "");
+                            setPointType(
+                              (locationToEdit.pointType || "edit") as
+                                | "new"
+                                | "edit"
+                            );
+
+                            if (map) {
+                              map.panTo({
+                                lat: locationToEdit.latitude,
+                                lng: locationToEdit.longitude,
+                              });
+                            }
+
+                            setSelectedLocation({
+                              lat: locationToEdit.latitude,
+                              lng: locationToEdit.longitude,
+                            });
+                          }, 50);
+                        }}
+                        className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        تعديل الموقع
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Stats Section */}
                 <div className="px-4 pb-3 border-b border-gray-800">
                   <div className="grid grid-cols-4 gap-2">
@@ -1093,9 +1482,7 @@ function MapPageContent() {
                 </div>
 
                 {/* Content */}
-                <div className="p-4 bg-gray-900">
-                  {formContent}
-                </div>
+                <div className="p-4 bg-gray-900">{formContent}</div>
               </div>
             </Sheet.Content>
           </Sheet.Container>
