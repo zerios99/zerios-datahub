@@ -94,14 +94,14 @@ function MapPageContent() {
   const markersRef = useRef<google.maps.Marker[]>([]);
   const [selectedMarkerLocation, setSelectedMarkerLocation] =
     useState<any>(null);
-  
+
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filtered locations based on search
   const filteredLocations = allLocations.filter((location) => {
     if (!searchQuery.trim()) return true;
-    
+
     const query = searchQuery.toLowerCase();
     return (
       location.name?.toLowerCase().includes(query) ||
@@ -111,6 +111,12 @@ function MapPageContent() {
       location.formalPlaceName?.toLowerCase().includes(query)
     );
   });
+
+  // Debug logging
+  console.log("Search Query:", searchQuery);
+  console.log("All Locations:", allLocations.length);
+  console.log("Filtered Locations:", filteredLocations.length);
+  console.log("Should show search results:", searchQuery.trim() !== "");
 
   // Center map on first search result when searching
   useEffect(() => {
@@ -208,7 +214,13 @@ function MapPageContent() {
       return;
     }
 
-    console.log("Creating markers for", filteredLocations.length, "locations (filtered from", allLocations.length, ")");
+    console.log(
+      "Creating markers for",
+      filteredLocations.length,
+      "locations (filtered from",
+      allLocations.length,
+      ")"
+    );
 
     // Clear existing markers
     markersRef.current.forEach((marker) => marker.setMap(null));
@@ -1125,37 +1137,170 @@ function MapPageContent() {
           </div>
         </div>
 
-        {/* Stats Section */}
-        <div className="px-6 py-4 border-b border-gray-800">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
-              <div className="text-2xl font-bold text-white">{stats.total}</div>
-              <div className="text-xs text-gray-400 mt-1">المجموع</div>
-            </div>
-            <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
-              <div className="text-2xl font-bold text-green-400">
-                {stats.approved}
+        {/* Search Results or Stats Section */}
+        {searchQuery.trim() ? (
+          <div className="flex-1 overflow-y-auto bg-gray-900">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-400" dir="rtl">
+                  نتائج البحث ({filteredLocations.length})
+                </h3>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                >
+                  مسح
+                </button>
               </div>
-              <div className="text-xs text-green-400 mt-1">موافق</div>
-            </div>
-            <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
-              <div className="text-2xl font-bold text-red-400">
-                {stats.rejected}
-              </div>
-              <div className="text-xs text-red-400 mt-1">مرفوض</div>
-            </div>
-            <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
-              <div className="text-2xl font-bold text-yellow-400">
-                {stats.pending}
-              </div>
-              <div className="text-xs text-yellow-400 mt-1">قيد الانتظار</div>
+
+              {filteredLocations.length === 0 ? (
+                <div className="text-center py-12">
+                  <svg
+                    className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-gray-400 text-sm">لا توجد نتائج</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {filteredLocations.map((location) => (
+                    <div
+                      key={location.id}
+                      onClick={() => {
+                        if (map) {
+                          map.panTo({
+                            lat: location.latitude,
+                            lng: location.longitude,
+                          });
+                          map.setZoom(17);
+                        }
+                        setSelectedMarkerLocation(location);
+                      }}
+                      className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-2xl p-4 cursor-pointer transition-all hover:border-gray-600 group"
+                      dir="rtl"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="shrink-0 w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center group-hover:bg-gray-600 transition-colors">
+                          <svg
+                            className="w-5 h-5 text-gray-300"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                            />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
+                          </svg>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white font-semibold text-sm mb-1 truncate">
+                            {location.name}
+                          </h4>
+                          <div className="space-y-1">
+                            {location.city && (
+                              <p className="text-gray-400 text-xs flex items-center gap-1">
+                                <span>📍</span>
+                                <span className="truncate">
+                                  {location.city}
+                                </span>
+                              </p>
+                            )}
+                            {location.street && (
+                              <p className="text-gray-400 text-xs flex items-center gap-1">
+                                <span>🛣️</span>
+                                <span className="truncate">
+                                  {location.street}
+                                </span>
+                              </p>
+                            )}
+                            {location.category && (
+                              <p className="text-gray-500 text-xs truncate">
+                                {location.category}
+                              </p>
+                            )}
+                          </div>
+                          <div className="mt-2">
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                                location.status === "APPROVED"
+                                  ? "bg-green-500/20 text-green-400"
+                                  : location.status === "REJECTED"
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-yellow-500/20 text-yellow-400"
+                              }`}
+                            >
+                              {location.status === "APPROVED"
+                                ? "✓ موافق"
+                                : location.status === "REJECTED"
+                                ? "✗ مرفوض"
+                                : "⏳ قيد المراجعة"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Stats Section */}
+            <div className="px-6 py-4 border-b border-gray-800">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
+                  <div className="text-2xl font-bold text-white">
+                    {stats.total}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">المجموع</div>
+                </div>
+                <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
+                  <div className="text-2xl font-bold text-green-400">
+                    {stats.approved}
+                  </div>
+                  <div className="text-xs text-green-400 mt-1">موافق</div>
+                </div>
+                <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
+                  <div className="text-2xl font-bold text-red-400">
+                    {stats.rejected}
+                  </div>
+                  <div className="text-xs text-red-400 mt-1">مرفوض</div>
+                </div>
+                <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
+                  <div className="text-2xl font-bold text-yellow-400">
+                    {stats.pending}
+                  </div>
+                  <div className="text-xs text-yellow-400 mt-1">
+                    قيد الانتظار
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
-          {formContent}
-        </div>
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
+              {formContent}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Map Container */}
@@ -1185,7 +1330,7 @@ function MapPageContent() {
                   placeholder="بحث عن موقع"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 bg-transparent border border-gray-700/50 rounded-full text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                  className="w-full px-4 py-3 pr-12 bg-white border border-gray-700/50 rounded-full text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-600"
                   dir="rtl"
                 />
                 <svg
@@ -1449,40 +1594,141 @@ function MapPageContent() {
                   </div>
                 )}
 
-                {/* Stats Section */}
-                <div className="px-4 pb-3 border-b border-gray-800">
-                  <div className="grid grid-cols-4 gap-2">
-                    <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
-                      <div className="text-2xl font-bold text-white">
-                        {stats.total}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">المجموع</div>
+                {/* Search Results or Stats/Form Section */}
+                {searchQuery.trim() ? (
+                  <div className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-gray-400" dir="rtl">
+                        نتائج البحث ({filteredLocations.length})
+                      </h3>
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="text-xs text-gray-400 hover:text-white transition-colors"
+                      >
+                        مسح
+                      </button>
                     </div>
-                    <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
-                      <div className="text-2xl font-bold text-green-400">
-                        {stats.approved}
+                    
+                    {filteredLocations.length === 0 ? (
+                      <div className="text-center py-12">
+                        <svg
+                          className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <p className="text-gray-400 text-sm">لا توجد نتائج</p>
                       </div>
-                      <div className="text-xs text-green-400 mt-1">موافق</div>
-                    </div>
-                    <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
-                      <div className="text-2xl font-bold text-red-400">
-                        {stats.rejected}
+                    ) : (
+                      <div className="space-y-2">
+                        {filteredLocations.map((location) => (
+                          <div
+                            key={location.id}
+                            onClick={() => {
+                              // Navigate to location on map
+                              if (map) {
+                                map.panTo({
+                                  lat: location.latitude,
+                                  lng: location.longitude,
+                                });
+                                map.setZoom(16);
+                              }
+                              // Clear search and show location details
+                              setSearchQuery("");
+                              setSelectedMarkerLocation(location);
+                            }}
+                            className="bg-gray-800 border border-gray-700 rounded-lg p-3 hover:bg-gray-750 transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="text-white font-semibold text-sm" dir="rtl">
+                                {location.name || "موقع"}
+                              </h4>
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-xs shrink-0 mr-2 ${
+                                  location.status === "APPROVED"
+                                    ? "bg-green-500/20 text-green-400"
+                                    : location.status === "REJECTED"
+                                    ? "bg-red-500/20 text-red-400"
+                                    : "bg-yellow-500/20 text-yellow-400"
+                                }`}
+                              >
+                                {location.status === "APPROVED"
+                                  ? "موافق"
+                                  : location.status === "REJECTED"
+                                  ? "مرفوض"
+                                  : "انتظار"}
+                              </span>
+                            </div>
+                            <div className="space-y-1 text-xs">
+                              {location.city && (
+                                <p className="text-gray-400" dir="rtl">
+                                  <span className="text-gray-500">المدينة:</span>{" "}
+                                  {location.city}
+                                </p>
+                              )}
+                              {location.street && (
+                                <p className="text-gray-400" dir="rtl">
+                                  <span className="text-gray-500">الشارع:</span>{" "}
+                                  {location.street}
+                                </p>
+                              )}
+                              {location.category && (
+                                <p className="text-gray-400" dir="rtl">
+                                  <span className="text-gray-500">الفئة:</span>{" "}
+                                  {location.category}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="text-xs text-red-400 mt-1">مرفوض</div>
-                    </div>
-                    <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
-                      <div className="text-2xl font-bold text-yellow-400">
-                        {stats.pending}
-                      </div>
-                      <div className="text-xs text-yellow-400 mt-1">
-                        قيد الانتظار
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Stats Section */}
+                    <div className="px-4 pb-3 border-b border-gray-800">
+                      <div className="grid grid-cols-4 gap-2">
+                        <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
+                          <div className="text-2xl font-bold text-white">
+                            {stats.total}
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">المجموع</div>
+                        </div>
+                        <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
+                          <div className="text-2xl font-bold text-green-400">
+                            {stats.approved}
+                          </div>
+                          <div className="text-xs text-green-400 mt-1">موافق</div>
+                        </div>
+                        <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
+                          <div className="text-2xl font-bold text-red-400">
+                            {stats.rejected}
+                          </div>
+                          <div className="text-xs text-red-400 mt-1">مرفوض</div>
+                        </div>
+                        <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
+                          <div className="text-2xl font-bold text-yellow-400">
+                            {stats.pending}
+                          </div>
+                          <div className="text-xs text-yellow-400 mt-1">
+                            قيد الانتظار
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Content */}
-                <div className="p-4 bg-gray-900">{formContent}</div>
+                    {/* Content */}
+                    <div className="p-4 bg-gray-900">{formContent}</div>
+                  </>
+                )}
               </div>
             </Sheet.Content>
           </Sheet.Container>
