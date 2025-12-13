@@ -137,9 +137,7 @@ export default function DashboardPage() {
         {/* Locations List */}
         <div className="bg-gray-800 rounded-lg shadow border border-gray-700">
           <div className="px-6 py-4 border-b border-gray-700">
-            <h2 className="text-lg font-semibold text-white">
-              My Locations
-            </h2>
+            <h2 className="text-lg font-semibold text-white">My Locations</h2>
           </div>
 
           {loadingLocations ? (

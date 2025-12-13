@@ -120,17 +120,30 @@ function MapPageContent() {
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Normalize Arabic text for search
+  const normalizeArabic = (text: string) => {
+    if (!text) return "";
+    return text
+      .toLowerCase()
+      .replace(/\s+/g, "") // Remove all spaces
+      .replace(/[ةه]/g, "ه") // Normalize ة and ه to ه
+      .replace(/[أإآا]/g, "ا") // Normalize all alif variations to ا
+      .replace(/ى/g, "ي"); // Normalize ى to ي
+  };
+
   // Filtered locations based on search
   const filteredLocations = allLocations.filter((location) => {
     if (!searchQuery.trim()) return true;
 
-    const query = searchQuery.toLowerCase();
+    const normalizedQuery = normalizeArabic(searchQuery);
     return (
-      location.name?.toLowerCase().includes(query) ||
-      location.city?.toLowerCase().includes(query) ||
-      location.street?.toLowerCase().includes(query) ||
-      location.category?.toLowerCase().includes(query) ||
-      location.formalPlaceName?.toLowerCase().includes(query)
+      normalizeArabic(location.name || "").includes(normalizedQuery) ||
+      normalizeArabic(location.city || "").includes(normalizedQuery) ||
+      normalizeArabic(location.street || "").includes(normalizedQuery) ||
+      normalizeArabic(location.category || "").includes(normalizedQuery) ||
+      normalizeArabic(location.formalPlaceName || "").includes(normalizedQuery) ||
+      normalizeArabic(location.side || "").includes(normalizedQuery) ||
+      normalizeArabic(location.path || "").includes(normalizedQuery)
     );
   });
 
@@ -668,7 +681,7 @@ function MapPageContent() {
     !selectedMarkerLocation || selectedMarkerLocation.userId === user.id;
 
   const formContent = showForm ? (
-    <form onSubmit={handleSubmit} className="space-y-3 text-base" dir="rtl">
+    <form onSubmit={handleSubmit} className="space-y-8 text-base" dir="rtl">
       <div className="flex items-center justify-between mt-4 mb-3">
         <h2 className="text-xl font-bold text-white text-center flex-1">
           {isEditMode ? "تعديل الموقع" : "اضافة موقع جديد"}
@@ -726,9 +739,35 @@ function MapPageContent() {
       {/* 1. City - المدينة */}
       <div>
         <div className="relative">
+          <select
+            id="city"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="w-full pr-14 pl-12 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 appearance-none peer"
+            style={{ direction: "rtl" }}
+            required
+          >
+            <option value=""></option>
+            {CITIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+          <label
+            htmlFor="city"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              city
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            المدينة *
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -741,22 +780,7 @@ function MapPageContent() {
               />
             </svg>
           </div>
-          <select
-            id="city"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base focus:outline-none focus:ring-2 focus:ring-gray-600 appearance-none"
-            style={{ direction: "rtl" }}
-            required
-          >
-            <option value="">المدينة</option>
-            {CITIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -777,9 +801,30 @@ function MapPageContent() {
       {/* 2. Neighborhood/Area - الحي / المنطقة */}
       <div>
         <div className="relative">
+          <input
+            type="text"
+            id="side"
+            value={side}
+            onChange={(e) => setSide(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
+            placeholder="الحي / المنطقة"
+            required
+          />
+          <label
+            htmlFor="side"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              side
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            الحي / المنطقة *
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -792,116 +837,35 @@ function MapPageContent() {
               />
             </svg>
           </div>
-          <input
-            type="text"
-            id="side"
-            value={side}
-            onChange={(e) => setSide(e.target.value)}
-            placeholder="الحي / المنطقة"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-            required
-          />
         </div>
       </div>
 
       {/* 3. Street Name - اسم الشارع */}
       <div>
         <div className="relative">
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          </div>
           <input
             type="text"
             id="street"
             value={street}
             onChange={(e) => setStreet(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
             placeholder="اسم الشارع"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
           />
-        </div>
-      </div>
-
-      {/* 4. Popular Place Name - الاسم الشعبي الشائع للمكان */}
-      <div>
-        <div className="relative">
+          <label
+            htmlFor="street"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              street
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            اسم الشارع
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          </div>
-          <input
-            type="text"
-            id="popularPlaceName"
-            value={popularPlaceName}
-            onChange={(e) => setPopularPlaceName(e.target.value)}
-            placeholder="الاسم الشعبي الشائع للمكان (مطلوب)"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-            required
-          />
-        </div>
-      </div>
-
-      {/* 5. Formal Place Name - الاسم الرسمي للمكان */}
-      <div>
-        <div className="relative">
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          </div>
-          <input
-            type="text"
-            id="formalPlaceName"
-            value={formalPlaceName}
-            onChange={(e) => setFormalPlaceName(e.target.value)}
-            placeholder="الاسم الرسمي للمكان"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-          />
-        </div>
-      </div>
-
-      {/* 6. Beside - بجانب */}
-      <div>
-        <div className="relative">
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-            <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -914,24 +878,159 @@ function MapPageContent() {
               />
             </svg>
           </div>
+        </div>
+      </div>
+
+      {/* 4. Popular Place Name - الاسم الشعبي الشائع للمكان */}
+      <div>
+        <div className="relative">
+          <input
+            type="text"
+            id="popularPlaceName"
+            value={popularPlaceName}
+            onChange={(e) => setPopularPlaceName(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
+            placeholder="الاسم الشعبي الشائع للمكان"
+            required
+          />
+          <label
+            htmlFor="popularPlaceName"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              popularPlaceName
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            الاسم الشعبي الشائع للمكان *
+          </label>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. Formal Place Name - الاسم الرسمي للمكان */}
+      <div>
+        <div className="relative">
+          <input
+            type="text"
+            id="formalPlaceName"
+            value={formalPlaceName}
+            onChange={(e) => setFormalPlaceName(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
+            placeholder="الاسم الرسمي للمكان"
+          />
+          <label
+            htmlFor="formalPlaceName"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              formalPlaceName
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            الاسم الرسمي للمكان
+          </label>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* 6. Beside - بجانب */}
+      <div>
+        <div className="relative">
           <input
             type="text"
             id="path"
             value={path}
             onChange={(e) => setPath(e.target.value)}
-            placeholder="بجانب"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
             style={{ direction: "rtl" }}
+            placeholder="بجانب"
           />
+          <label
+            htmlFor="path"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              path
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            بجانب
+          </label>
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+              />
+            </svg>
+          </div>
         </div>
       </div>
 
       {/* 7. Direction - باتجاه */}
       <div>
         <div className="relative">
+          <input
+            type="text"
+            id="dir"
+            value={dir}
+            onChange={(e) => setDir(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
+            placeholder="باتجاه"
+          />
+          <label
+            htmlFor="dir"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              dir
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            باتجاه
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -940,28 +1039,39 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                d="M13 7l5 5m0 0l-5 5m5-5H6"
               />
             </svg>
           </div>
-          <input
-            type="text"
-            id="dir"
-            value={dir}
-            onChange={(e) => setDir(e.target.value)}
-            placeholder="باتجاه"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-          />
         </div>
       </div>
 
       {/* 8. Bus/Service Line - خط سرفيس / باص */}
       <div>
         <div className="relative">
+          <input
+            type="text"
+            id="line"
+            value={line}
+            onChange={(e) => setLine(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
+            placeholder="خط سرفيس / باص"
+          />
+          <label
+            htmlFor="line"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              line
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            خط سرفيس / باص
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -970,28 +1080,45 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M4 6h16M4 12h16M4 18h16"
+                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
               />
             </svg>
           </div>
-          <input
-            type="text"
-            id="line"
-            value={line}
-            onChange={(e) => setLine(e.target.value)}
-            placeholder="خط سرفيس / باص"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-          />
         </div>
       </div>
 
       {/* 9. Category - التصنيف */}
       <div>
         <div className="relative">
+          <select
+            id="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full pr-14 pl-12 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 appearance-none peer"
+            style={{ direction: "rtl" }}
+            required
+          >
+            <option value=""></option>
+            {CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+          <label
+            htmlFor="category"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              category
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            التصنيف *
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1000,26 +1127,11 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
               />
             </svg>
           </div>
-          <select
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base focus:outline-none focus:ring-2 focus:ring-gray-600 appearance-none"
-            style={{ direction: "rtl" }}
-            required
-          >
-            <option value="">التصنيف</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-          <div className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -1160,9 +1272,29 @@ function MapPageContent() {
       {/* Notes */}
       <div>
         <div className="relative">
+          <input
+            type="text"
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 peer placeholder-transparent"
+            style={{ direction: "rtl" }}
+            placeholder="ملاحظة"
+          />
+          <label
+            htmlFor="notes"
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
+              notes
+                ? "-top-3 text-sm text-blue-400"
+                : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
+            }`}
+            style={{ direction: "rtl" }}
+          >
+            ملاحظة
+          </label>
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
             <svg
-              className="w-6 h-6"
+              className="w-5 h-5"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1171,19 +1303,10 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
               />
             </svg>
           </div>
-          <input
-            type="text"
-            id="notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="ملاحظة"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-          />
         </div>
       </div>
 
