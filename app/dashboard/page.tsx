@@ -47,20 +47,20 @@ export default function DashboardPage() {
     switch (status) {
       case "APPROVED":
         return (
-          <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded">
-            Approved
+          <span className="px-2 py-1 bg-green-500/20 text-green-400 text-xs font-semibold rounded">
+            موافق
           </span>
         );
       case "REJECTED":
         return (
-          <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-semibold rounded">
-            Rejected
+          <span className="px-2 py-1 bg-red-500/20 text-red-400 text-xs font-semibold rounded">
+            مرفوض
           </span>
         );
       default:
         return (
-          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded">
-            Pending
+          <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-semibold rounded">
+            قيد المراجعة
           </span>
         );
     }
@@ -68,8 +68,8 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl text-gray-600">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-xl text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -77,14 +77,14 @@ export default function DashboardPage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-gray-800 shadow-sm border-b border-gray-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
-              <p className="text-sm text-gray-600">Welcome, {user.name}</p>
+              <h1 className="text-2xl font-bold text-white">My Dashboard</h1>
+              <p className="text-sm text-gray-400">Welcome, {user.name}</p>
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -95,7 +95,7 @@ export default function DashboardPage() {
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors text-sm font-medium"
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
               >
                 Logout
               </button>
@@ -107,50 +107,48 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">
-              Total Locations
-            </h3>
-            <p className="text-3xl font-bold text-gray-900 mt-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <div className="bg-gray-800 rounded-2xl p-4 text-center border border-gray-700">
+            <div className="text-3xl font-bold text-white">
               {locations.length}
-            </p>
+            </div>
+            <div className="text-sm text-gray-400 mt-1">المجموع</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">Approved</h3>
-            <p className="text-3xl font-bold text-green-600 mt-2">
+          <div className="bg-green-900/30 rounded-2xl p-4 text-center border border-green-800">
+            <div className="text-3xl font-bold text-green-400">
               {locations.filter((l) => l.status === "APPROVED").length}
-            </p>
+            </div>
+            <div className="text-sm text-green-400 mt-1">موافق</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">Rejected</h3>
-            <p className="text-3xl font-bold text-red-600 mt-2">
+          <div className="bg-red-900/30 rounded-2xl p-4 text-center border border-red-800">
+            <div className="text-3xl font-bold text-red-400">
               {locations.filter((l) => l.status === "REJECTED").length}
-            </p>
+            </div>
+            <div className="text-sm text-red-400 mt-1">مرفوض</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-sm font-medium text-gray-500">Pending</h3>
-            <p className="text-3xl font-bold text-yellow-600 mt-2">
+          <div className="bg-yellow-900/30 rounded-2xl p-4 text-center border border-yellow-800">
+            <div className="text-3xl font-bold text-yellow-400">
               {locations.filter((l) => l.status === "PENDING").length}
-            </p>
+            </div>
+            <div className="text-sm text-yellow-400 mt-1">قيد الانتظار</div>
           </div>
         </div>
 
         {/* Locations List */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
+        <div className="bg-gray-800 rounded-lg shadow border border-gray-700">
+          <div className="px-6 py-4 border-b border-gray-700">
+            <h2 className="text-lg font-semibold text-white">
               My Locations
             </h2>
           </div>
 
           {loadingLocations ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-gray-400">
               Loading locations...
             </div>
           ) : locations.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-500 mb-4">
+              <p className="text-gray-400 mb-4">
                 You haven&apos;t added any locations yet
               </p>
               <Link
@@ -161,13 +159,13 @@ export default function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-700">
               {locations.map((location) => (
-                <div key={location.id} className="p-6 hover:bg-gray-50">
+                <div key={location.id} className="p-6 hover:bg-gray-750">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-medium text-gray-900">
+                        <h3 className="text-lg font-medium text-white">
                           {location.name}
                         </h3>
                         {getStatusBadge(location.status || "PENDING")}
@@ -177,11 +175,11 @@ export default function DashboardPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-1">
+                      <p className="text-sm text-gray-400 mb-1">
                         <span className="font-medium">City:</span>{" "}
                         {location.city}
                       </p>
-                      <p className="text-sm text-gray-600 mb-1">
+                      <p className="text-sm text-gray-400 mb-1">
                         <span className="font-medium">Category:</span>{" "}
                         {location.category}
                       </p>

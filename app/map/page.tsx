@@ -32,6 +32,9 @@ function MapPageContent() {
   const [formalPlaceName, setFormalPlaceName] = useState("");
   const [street, setStreet] = useState("");
   const [side, setSide] = useState("");
+  const [path, setPath] = useState("");
+  const [dir, setDir] = useState("");
+  const [line, setLine] = useState("");
   const [category, setCategory] = useState("");
   const [belongsToRoute, setBelongsToRoute] = useState("");
   const [images, setImages] = useState<File[]>([]);
@@ -66,21 +69,40 @@ function MapPageContent() {
     "الحسكة",
   ];
   const CATEGORIES = [
-    "🚐 موقف نقل",
-    "📍 معلم معروف",
-    "🛣️ جسر / نفق",
-    "🚪 مدخل حي",
-    "🛒 سوق / منطقة تجارية",
-    "🏬 مول / مركز تسوق",
-    "🕌 / ⛪ جامع / كنيسة",
+    "🚐 موقف سرفيس / باص",
+    "� كراج / محطة نقل",
+    "�️ سوق / شارع تجاري / سوق شعبي",
+    "🏬 مول / مركز تجاري",
+    "🏪 محل تجاري مشهور",
+    "�️ / ☕ مطعم / قهوة مشهورة",
+    "🎓 مدرسة / جامعة / معهد / روضة",
     "🏥 مشفى / مركز طبي",
-    "🎓 مدرسة / جامعة",
-    "🚌 كراج / محطة نقل",
-    "🍽️ مطعم / محل مشهور",
+    "📍 معلم معروف",
+    "🕌 / ⛪ جامع / كنيسة",
+    "�️ جسر / نفق",
+    "🚶‍♂️ نفق مشاة / جسر مشاة",
+    "🔄 دوّار",
+    "🚦 إشارة مرور",
+    "➕ تقاطع طرق",
     "🌳 حديقة / ساحة",
-    "⛽ محطة وقود",
     "🏛️ دائرة حكومية",
-    "⚽ ملعب / نادي رياضي",
+    "🛂 سفارة / قنصلية",
+    "🔧 ورشة صيانة",
+    "🅿️ موقف سيارات",
+    "⛽ محطة وقود",
+    "� مصرف / صراف آلي",
+    "💸 شركة صرافة",
+    "⚽ منشأة رياضية (ملعب / نادي / صالة)",
+    "🎉 صالة مناسبات (أفراح / تعازي)",
+    "🏨 فندق",
+    "🥖 فرن / مخبز",
+    "🏠 مدخل بناية / مدخل حي",
+    "🏢 شركة / مكتب",
+    "🛬 مطار",
+    "🛋️ استراحة",
+    "🏖️ شاطئ / كورنيش",
+    "⚓ ميناء / مرفأ بحري",
+    "🚤 مرسى قوارب",
   ];
 
   // Mobile bottom sheet state
@@ -144,6 +166,30 @@ function MapPageContent() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Handle keyboard visibility on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleResize = () => {
+      // Detect if keyboard is open by checking if viewport height changed significantly
+      const isKeyboardOpen = window.visualViewport
+        ? window.visualViewport.height < window.innerHeight * 0.75
+        : false;
+
+      if (isKeyboardOpen && sheetRef.current) {
+        // Snap to full height when keyboard opens
+        sheetRef.current.snapTo(5); // Index 5 is the full height (1)
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", handleResize);
+      return () => {
+        window.visualViewport?.removeEventListener("resize", handleResize);
+      };
+    }
+  }, [isMobile]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -399,9 +445,52 @@ function MapPageContent() {
     }
   }, [map, selectedLocation, isEditMode]);
 
+  const handleDelete = async (locationId: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذا الموقع؟")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/user/locations/${locationId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete location");
+      }
+
+      setMessage({
+        type: "success",
+        text: "تم حذف الموقع بنجاح",
+      });
+
+      // Clear selected marker
+      setSelectedMarkerLocation(null);
+
+      // Refetch locations to update the map
+      const locationsResponse = await fetch("/api/locations");
+      if (locationsResponse.ok) {
+        const data = await locationsResponse.json();
+        setAllLocations(data.locations || []);
+      }
+
+      // Clear message after 2 seconds
+      setTimeout(() => {
+        setMessage(null);
+      }, 2000);
+    } catch (error) {
+      console.error("Error deleting location:", error);
+      setMessage({
+        type: "error",
+        text: "فشل حذف الموقع. يرجى المحاولة مرة أخرى.",
+      });
+    }
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setImages(Array.from(e.target.files));
+      const newFiles = Array.from(e.target.files);
+      setImages([...images, ...newFiles]);
     }
   };
 
@@ -453,7 +542,7 @@ function MapPageContent() {
       return;
     }
 
-    if (!popularPlaceName || !city || !street || !side || !category) {
+    if (!popularPlaceName || !city || !side || !category) {
       setMessage({ type: "error", text: "Please fill in all required fields" });
       return;
     }
@@ -473,6 +562,9 @@ function MapPageContent() {
         city,
         street,
         side,
+        path,
+        dir,
+        line,
         latitude: selectedLocation.lat,
         longitude: selectedLocation.lng,
         category,
@@ -579,7 +671,7 @@ function MapPageContent() {
     <form onSubmit={handleSubmit} className="space-y-3 text-base" dir="rtl">
       <div className="flex items-center justify-between mt-4 mb-3">
         <h2 className="text-xl font-bold text-white text-center flex-1">
-          {isEditMode ? "تعديل الموقع" : "نظام تجميع النقاط"}
+          {isEditMode ? "تعديل الموقع" : "اضافة موقع جديد"}
         </h2>
         {isEditMode && (
           <button
@@ -592,6 +684,9 @@ function MapPageContent() {
               setFormalPlaceName("");
               setStreet("");
               setSide("");
+              setPath("");
+              setDir("");
+              setLine("");
               setCategory("");
               setBelongsToRoute("");
               setImages([]);
@@ -628,34 +723,7 @@ function MapPageContent() {
         </div>
       )}
 
-      {!isEditMode && (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setPointType("new")}
-            className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-              pointType === "new"
-                ? "bg-gray-700 text-white border border-gray-600"
-                : "bg-gray-800 text-gray-400 border border-gray-700"
-            }`}
-          >
-            نقطة جديدة
-          </button>
-          <button
-            type="button"
-            onClick={() => setPointType("edit")}
-            className={`flex-1 py-3 rounded-full text-base font-medium transition-colors ${
-              pointType === "edit"
-                ? "bg-gray-700 text-white border border-gray-600"
-                : "bg-gray-800 text-gray-400 border border-gray-700"
-            }`}
-          >
-            تعديل نقطة
-          </button>
-        </div>
-      )}
-
-      {/* City */}
+      {/* 1. City - المدينة */}
       <div>
         <div className="relative">
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -706,7 +774,68 @@ function MapPageContent() {
         </div>
       </div>
 
-      {/* Popular place name */}
+      {/* 2. Neighborhood/Area - الحي / المنطقة */}
+      <div>
+        <div className="relative">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="side"
+            value={side}
+            onChange={(e) => setSide(e.target.value)}
+            placeholder="الحي / المنطقة"
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+            style={{ direction: "rtl" }}
+            required
+          />
+        </div>
+      </div>
+
+      {/* 3. Street Name - اسم الشارع */}
+      <div>
+        <div className="relative">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="street"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            placeholder="اسم الشارع"
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+            style={{ direction: "rtl" }}
+          />
+        </div>
+      </div>
+
+      {/* 4. Popular Place Name - الاسم الشعبي الشائع للمكان */}
       <div>
         <div className="relative">
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -729,7 +858,7 @@ function MapPageContent() {
             id="popularPlaceName"
             value={popularPlaceName}
             onChange={(e) => setPopularPlaceName(e.target.value)}
-            placeholder="الاسم الشائع للمكان (مطلوب)"
+            placeholder="الاسم الشعبي الشائع للمكان (مطلوب)"
             className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
             style={{ direction: "rtl" }}
             required
@@ -737,7 +866,7 @@ function MapPageContent() {
         </div>
       </div>
 
-      {/* Formal place name */}
+      {/* 5. Formal Place Name - الاسم الرسمي للمكان */}
       <div>
         <div className="relative">
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -767,7 +896,7 @@ function MapPageContent() {
         </div>
       </div>
 
-      {/* Street */}
+      {/* 6. Beside - بجانب */}
       <div>
         <div className="relative">
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -781,24 +910,23 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
               />
             </svg>
           </div>
           <input
             type="text"
-            id="street"
-            value={street}
-            onChange={(e) => setStreet(e.target.value)}
-            placeholder="الشارع (مطلوب)"
+            id="path"
+            value={path}
+            onChange={(e) => setPath(e.target.value)}
+            placeholder="بجانب"
             className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
             style={{ direction: "rtl" }}
-            required
           />
         </div>
       </div>
 
-      {/* Side */}
+      {/* 7. Direction - باتجاه */}
       <div>
         <div className="relative">
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -812,23 +940,53 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
               />
             </svg>
           </div>
           <input
             type="text"
-            id="side"
-            value={side}
-            onChange={(e) => setSide(e.target.value)}
-            placeholder="الجانب"
+            id="dir"
+            value={dir}
+            onChange={(e) => setDir(e.target.value)}
+            placeholder="باتجاه"
             className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
             style={{ direction: "rtl" }}
           />
         </div>
       </div>
 
-      {/* Category */}
+      {/* 8. Bus/Service Line - خط سرفيس / باص */}
+      <div>
+        <div className="relative">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </div>
+          <input
+            type="text"
+            id="line"
+            value={line}
+            onChange={(e) => setLine(e.target.value)}
+            placeholder="خط سرفيس / باص"
+            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+            style={{ direction: "rtl" }}
+          />
+        </div>
+      </div>
+
+      {/* 9. Category - التصنيف */}
       <div>
         <div className="relative">
           <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
@@ -879,12 +1037,16 @@ function MapPageContent() {
         </div>
       </div>
 
-      {/* Belongs to route */}
-      <div>
-        <div className="relative">
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+      {/* Photo Upload and Confidence */}
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-3 items-start">
+          {/* Upload Button - Smaller, no image inside */}
+          <label
+            htmlFor="images"
+            className="shrink-0 w-20 h-20 bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 transition-colors"
+          >
             <svg
-              className="w-6 h-6"
+              className="w-8 h-8 text-gray-400 mb-1"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -893,73 +1055,14 @@ function MapPageContent() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                d="M12 4v16m8-8H4"
               />
             </svg>
-          </div>
-          <input
-            type="text"
-            id="belongsToRoute"
-            value={belongsToRoute}
-            onChange={(e) => setBelongsToRoute(e.target.value)}
-            placeholder="ينتمي إلى مسار"
-            className="w-full pr-14 pl-6 py-4 bg-gray-800 border border-gray-700 rounded-[28px] text-white text-base placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-            style={{ direction: "rtl" }}
-          />
-        </div>
-      </div>
-
-      {/* Photo Upload and Confidence */}
-      <div className="flex flex-col gap-3">
-        <div className="flex gap-3 items-start">
-          {/* Upload Button */}
-          <label
-            htmlFor="images"
-            className="shrink-0 w-32 h-32 bg-gray-800 border border-gray-700 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-750 relative overflow-hidden"
-          >
-            {images.length > 0 ? (
-              <>
-                <img
-                  src={URL.createObjectURL(images[0])}
-                  alt="Selected"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center">
-                  <svg
-                    className="w-8 h-8 text-white mb-1"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span className="text-white text-xs font-medium">
-                    ({images.length})
-                  </span>
-                </div>
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-10 h-10 text-gray-400 mb-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-                <span className="text-gray-400 text-sm">رفع صورة</span>
-              </>
+            <span className="text-gray-400 text-xs">صورة</span>
+            {images.length > 0 && (
+              <span className="text-white text-xs font-medium mt-0.5">
+                ({images.length})
+              </span>
             )}
             <input
               type="file"
@@ -998,39 +1101,58 @@ function MapPageContent() {
           </div>
         </div>
 
-        {/* Image Preview */}
+        {/* Image Preview Grid */}
         {images.length > 0 && (
-          <div className="grid grid-cols-3 gap-2">
-            {images.map((image, index) => (
-              <div key={index} className="relative group">
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt={`Preview ${index + 1}`}
-                  className="w-full h-24 object-cover rounded-lg border border-gray-700"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setImages(images.filter((_, i) => i !== index));
-                  }}
-                  className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ))}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-400 text-sm" dir="rtl">
+                الصور المحددة ({images.length})
+              </span>
+              <button
+                type="button"
+                onClick={() => setImages([])}
+                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+              >
+                حذف الكل
+              </button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {images.map((image, index) => (
+                <div key={index} className="relative group aspect-square">
+                  <img
+                    src={URL.createObjectURL(image)}
+                    alt={`Preview ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg border border-gray-700"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors rounded-lg flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImages(images.filter((_, i) => i !== index));
+                      }}
+                      className="bg-red-500 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="absolute top-1 left-1 bg-gray-900/80 text-white text-xs px-1.5 py-0.5 rounded">
+                    {index + 1}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -1090,218 +1212,220 @@ function MapPageContent() {
   return (
     <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-gray-900">
       {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-96 bg-gray-900 shadow-lg flex-col shrink-0 border-r border-gray-800">
-        <div className="p-6 border-b border-gray-800">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="بحث عن موقع"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 pr-12 bg-transparent border border-gray-700/50 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-                dir="rtl"
-              />
-              <svg
-                className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+      {!isMobile && (
+        <div className="md:w-96 bg-gray-900 shadow-lg flex flex-col shrink-0 border-r border-gray-800">
+          <div className="p-6 border-b border-gray-800">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="shrink-0 w-12 h-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full flex items-center justify-center hover:bg-gray-750/50 transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="shrink-0 w-12 h-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full flex items-center justify-center hover:bg-gray-750/50 transition-colors"
-            >
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Search Results or Stats Section */}
-        {searchQuery.trim() ? (
-          <div className="flex-1 overflow-y-auto bg-gray-900">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-400" dir="rtl">
-                  نتائج البحث ({filteredLocations.length})
-                </h3>
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="text-xs text-gray-400 hover:text-white transition-colors"
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  مسح
-                </button>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  placeholder="بحث عن موقع"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 pr-12 bg-transparent border border-gray-700/50 rounded-full text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
+                  dir="rtl"
+                />
+                <svg
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
               </div>
+            </div>
+          </div>
 
-              {filteredLocations.length === 0 ? (
-                <div className="text-center py-12">
-                  <svg
-                    className="w-16 h-16 mx-auto text-gray-600 mb-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+          {/* Search Results or Stats Section */}
+          {searchQuery.trim() ? (
+            <div className="flex-1 overflow-y-auto bg-gray-900">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-400" dir="rtl">
+                    نتائج البحث ({filteredLocations.length})
+                  </h3>
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="text-xs text-gray-400 hover:text-white transition-colors"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <p className="text-gray-400 text-sm">لا توجد نتائج</p>
+                    مسح
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredLocations.map((location) => (
-                    <div
-                      key={location.id}
-                      onClick={() => {
-                        if (map) {
-                          map.panTo({
-                            lat: location.latitude,
-                            lng: location.longitude,
-                          });
-                          map.setZoom(17);
-                        }
-                        setSelectedMarkerLocation(location);
-                      }}
-                      className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-2xl p-4 cursor-pointer transition-all hover:border-gray-600 group"
-                      dir="rtl"
+
+                {filteredLocations.length === 0 ? (
+                  <div className="text-center py-12">
+                    <svg
+                      className="w-16 h-16 mx-auto text-gray-600 mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="shrink-0 w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center group-hover:bg-gray-600 transition-colors">
-                          <svg
-                            className="w-5 h-5 text-gray-300"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-white font-semibold text-sm mb-1 truncate">
-                            {location.name}
-                          </h4>
-                          <div className="space-y-1">
-                            {location.city && (
-                              <p className="text-gray-400 text-xs flex items-center gap-1">
-                                <span>📍</span>
-                                <span className="truncate">
-                                  {location.city}
-                                </span>
-                              </p>
-                            )}
-                            {location.street && (
-                              <p className="text-gray-400 text-xs flex items-center gap-1">
-                                <span>🛣️</span>
-                                <span className="truncate">
-                                  {location.street}
-                                </span>
-                              </p>
-                            )}
-                            {location.category && (
-                              <p className="text-gray-500 text-xs truncate">
-                                {location.category}
-                              </p>
-                            )}
-                          </div>
-                          <div className="mt-2">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                                location.status === "APPROVED"
-                                  ? "bg-green-500/20 text-green-400"
-                                  : location.status === "REJECTED"
-                                  ? "bg-red-500/20 text-red-400"
-                                  : "bg-yellow-500/20 text-yellow-400"
-                              }`}
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <p className="text-gray-400 text-sm">لا توجد نتائج</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredLocations.map((location) => (
+                      <div
+                        key={location.id}
+                        onClick={() => {
+                          if (map) {
+                            map.panTo({
+                              lat: location.latitude,
+                              lng: location.longitude,
+                            });
+                            map.setZoom(17);
+                          }
+                          setSelectedMarkerLocation(location);
+                        }}
+                        className="bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-2xl p-4 cursor-pointer transition-all hover:border-gray-600 group"
+                        dir="rtl"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="shrink-0 w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center group-hover:bg-gray-600 transition-colors">
+                            <svg
+                              className="w-5 h-5 text-gray-300"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              {location.status === "APPROVED"
-                                ? "✓ موافق"
-                                : location.status === "REJECTED"
-                                ? "✗ مرفوض"
-                                : "⏳ قيد المراجعة"}
-                            </span>
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-semibold text-sm mb-1 truncate">
+                              {location.name}
+                            </h4>
+                            <div className="space-y-1">
+                              {location.city && (
+                                <p className="text-gray-400 text-xs flex items-center gap-1">
+                                  <span>📍</span>
+                                  <span className="truncate">
+                                    {location.city}
+                                  </span>
+                                </p>
+                              )}
+                              {location.street && (
+                                <p className="text-gray-400 text-xs flex items-center gap-1">
+                                  <span>🛣️</span>
+                                  <span className="truncate">
+                                    {location.street}
+                                  </span>
+                                </p>
+                              )}
+                              {location.category && (
+                                <p className="text-gray-500 text-xs truncate">
+                                  {location.category}
+                                </p>
+                              )}
+                            </div>
+                            <div className="mt-2">
+                              <span
+                                className={`inline-block px-2 py-0.5 rounded-full text-xs ${
+                                  location.status === "APPROVED"
+                                    ? "bg-green-500/20 text-green-400"
+                                    : location.status === "REJECTED"
+                                    ? "bg-red-500/20 text-red-400"
+                                    : "bg-yellow-500/20 text-yellow-400"
+                                }`}
+                              >
+                                {location.status === "APPROVED"
+                                  ? "✓ موافق"
+                                  : location.status === "REJECTED"
+                                  ? "✗ مرفوض"
+                                  : "⏳ قيد المراجعة"}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            {/* Stats Section */}
-            <div className="px-6 py-4 border-b border-gray-800">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
-                  <div className="text-2xl font-bold text-white">
-                    {stats.total}
+          ) : (
+            <>
+              {/* Stats Section */}
+              <div className="px-6 py-4 border-b border-gray-800">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-800 rounded-2xl p-3 text-center border border-gray-700">
+                    <div className="text-2xl font-bold text-white">
+                      {stats.total}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">المجموع</div>
                   </div>
-                  <div className="text-xs text-gray-400 mt-1">المجموع</div>
-                </div>
-                <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
-                  <div className="text-2xl font-bold text-green-400">
-                    {stats.approved}
+                  <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
+                    <div className="text-2xl font-bold text-green-400">
+                      {stats.approved}
+                    </div>
+                    <div className="text-xs text-green-400 mt-1">موافق</div>
                   </div>
-                  <div className="text-xs text-green-400 mt-1">موافق</div>
-                </div>
-                <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
-                  <div className="text-2xl font-bold text-red-400">
-                    {stats.rejected}
+                  <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
+                    <div className="text-2xl font-bold text-red-400">
+                      {stats.rejected}
+                    </div>
+                    <div className="text-xs text-red-400 mt-1">مرفوض</div>
                   </div>
-                  <div className="text-xs text-red-400 mt-1">مرفوض</div>
-                </div>
-                <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
-                  <div className="text-2xl font-bold text-yellow-400">
-                    {stats.pending}
-                  </div>
-                  <div className="text-xs text-yellow-400 mt-1">
-                    قيد الانتظار
+                  <div className="bg-yellow-900/30 rounded-2xl p-3 text-center border border-yellow-800">
+                    <div className="text-2xl font-bold text-yellow-400">
+                      {stats.pending}
+                    </div>
+                    <div className="text-xs text-yellow-400 mt-1">
+                      قيد الانتظار
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
-              {formContent}
-            </div>
-          </>
-        )}
-      </div>
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-900">
+                {formContent}
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Map Container */}
       <div className="flex-1 relative">
@@ -1324,6 +1448,24 @@ function MapPageContent() {
         <div className="md:hidden absolute top-0 left-0 right-0 bg-transparent">
           <div className="p-4">
             <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => router.push("/dashboard")}
+                className="shrink-0 w-12 h-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full flex items-center justify-center hover:bg-gray-750/50 transition-colors"
+              >
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </button>
               <div className="relative flex-1">
                 <input
                   type="text"
@@ -1347,24 +1489,6 @@ function MapPageContent() {
                   />
                 </svg>
               </div>
-              <button
-                onClick={() => router.push("/dashboard")}
-                className="shrink-0 w-12 h-12 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full flex items-center justify-center hover:bg-gray-750/50 transition-colors"
-              >
-                <svg
-                  className="w-6 h-6 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              </button>
             </div>
           </div>
         </div>
@@ -1453,7 +1577,7 @@ function MapPageContent() {
                 {selectedMarkerLocation && (
                   <div className="px-4 py-4 border-b border-gray-800 bg-gray-800/50">
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-bold text-white">
+                      <h3 className="text-lg font-bold text-white" dir="rtl">
                         {selectedMarkerLocation.name || "موقع"}
                       </h3>
                       <button
@@ -1478,34 +1602,119 @@ function MapPageContent() {
                       </button>
                     </div>
 
-                    <div className="space-y-2 text-sm">
+                    <div className="space-y-2 text-sm" dir="rtl">
+                      {selectedMarkerLocation.formalPlaceName && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            الاسم الرسمي:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.formalPlaceName}
+                          </span>
+                        </div>
+                      )}
                       {selectedMarkerLocation.city && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400">المدينة:</span>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            المدينة:
+                          </span>
                           <span className="text-white">
                             {selectedMarkerLocation.city}
                           </span>
                         </div>
                       )}
-                      {selectedMarkerLocation.category && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400">الفئة:</span>
-                          <span className="text-white">
-                            {selectedMarkerLocation.category}
-                          </span>
-                        </div>
-                      )}
                       {selectedMarkerLocation.street && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400">الشارع:</span>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            الشارع:
+                          </span>
                           <span className="text-white">
                             {selectedMarkerLocation.street}
                           </span>
                         </div>
                       )}
+                      {selectedMarkerLocation.side && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            الجانب:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.side}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.path && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            مسار سرفيس او باص:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.path}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.dir && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            الاتجاه:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.dir}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.line && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">الخط:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.line}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.category && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">الفئة:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.category}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <span className="text-gray-400 shrink-0">
+                          الإحداثيات:
+                        </span>
+                        <span className="text-white font-mono text-xs">
+                          {selectedMarkerLocation.latitude.toFixed(6)},{" "}
+                          {selectedMarkerLocation.longitude.toFixed(6)}
+                        </span>
+                      </div>
+                      {selectedMarkerLocation.photoConfidence && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            دقة الصورة:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.photoConfidence}%
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.pointType && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            نوع النقطة:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.pointType === "new"
+                              ? "جديد"
+                              : "تعديل"}
+                          </span>
+                        </div>
+                      )}
                       {selectedMarkerLocation.status && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-gray-400">الحالة:</span>
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            الحالة:
+                          </span>
                           <span
                             className={`px-2 py-1 rounded-full text-xs ${
                               selectedMarkerLocation.status === "APPROVED"
@@ -1526,70 +1735,120 @@ function MapPageContent() {
                       {selectedMarkerLocation.notes && (
                         <div className="flex flex-col gap-1">
                           <span className="text-gray-400">ملاحظات:</span>
-                          <span className="text-white">
+                          <span className="text-white bg-gray-900/50 p-2 rounded-lg">
                             {selectedMarkerLocation.notes}
                           </span>
                         </div>
                       )}
+                      {selectedMarkerLocation.user && (
+                        <div className="flex items-start gap-2 pt-2 border-t border-gray-700">
+                          <span className="text-gray-400 shrink-0">
+                            أضيف بواسطة:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.user.name} (
+                            {selectedMarkerLocation.user.email})
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.createdAt && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            تاريخ الإضافة:
+                          </span>
+                          <span className="text-white text-xs">
+                            {new Date(
+                              selectedMarkerLocation.createdAt
+                            ).toLocaleString("ar-EG")}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMarkerLocation.updatedAt &&
+                        selectedMarkerLocation.updatedAt !==
+                          selectedMarkerLocation.createdAt && (
+                          <div className="flex items-start gap-2">
+                            <span className="text-gray-400 shrink-0">
+                              آخر تحديث:
+                            </span>
+                            <span className="text-white text-xs">
+                              {new Date(
+                                selectedMarkerLocation.updatedAt
+                              ).toLocaleString("ar-EG")}
+                            </span>
+                          </div>
+                        )}
                     </div>
 
-                    {/* Edit button - only show if user owns this location */}
+                    {/* Edit and Delete buttons - only show if user owns this location */}
                     {selectedMarkerLocation.userId === user?.id && (
-                      <button
-                        onClick={() => {
-                          console.log(
-                            "Loading location for editing:",
-                            selectedMarkerLocation
-                          );
-
-                          // First, clear selected marker to show the form
-                          const locationToEdit = selectedMarkerLocation;
-                          setSelectedMarkerLocation(null);
-
-                          // Then load the location data after a brief delay to ensure form is visible
-                          setTimeout(() => {
-                            setIsEditMode(true);
-                            setEditingLocationId(locationToEdit.id);
-                            setCity(locationToEdit.city || "");
-                            setPopularPlaceName(locationToEdit.name || "");
-                            setFormalPlaceName(
-                              locationToEdit.formalPlaceName || ""
-                            );
-                            setStreet(locationToEdit.street || "");
-                            setSide(locationToEdit.side || "");
-                            setCategory(locationToEdit.category || "");
-                            setBelongsToRoute(
-                              locationToEdit.belongsToRoute || ""
-                            );
-                            setPhotoConfidence(
-                              (locationToEdit.photoConfidence || "100") as
-                                | "100"
-                                | "90"
-                            );
-                            setNotes(locationToEdit.notes || "");
-                            setPointType(
-                              (locationToEdit.pointType || "edit") as
-                                | "new"
-                                | "edit"
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          onClick={() => {
+                            console.log(
+                              "Loading location for editing:",
+                              selectedMarkerLocation
                             );
 
-                            if (map) {
-                              map.panTo({
+                            // First, clear selected marker to show the form
+                            const locationToEdit = selectedMarkerLocation;
+                            setSelectedMarkerLocation(null);
+
+                            // Then load the location data after a brief delay to ensure form is visible
+                            setTimeout(() => {
+                              setIsEditMode(true);
+                              setEditingLocationId(locationToEdit.id);
+                              setCity(locationToEdit.city || "");
+                              setPopularPlaceName(locationToEdit.name || "");
+                              setFormalPlaceName(
+                                locationToEdit.formalPlaceName || ""
+                              );
+                              setStreet(locationToEdit.street || "");
+                              setSide(locationToEdit.side || "");
+                              setPath(locationToEdit.path || "");
+                              setDir(locationToEdit.dir || "");
+                              setLine(locationToEdit.line || "");
+                              setCategory(locationToEdit.category || "");
+                              setBelongsToRoute(
+                                locationToEdit.belongsToRoute || ""
+                              );
+                              setPhotoConfidence(
+                                (locationToEdit.photoConfidence || "100") as
+                                  | "100"
+                                  | "90"
+                              );
+                              setNotes(locationToEdit.notes || "");
+                              setPointType(
+                                (locationToEdit.pointType || "edit") as
+                                  | "new"
+                                  | "edit"
+                              );
+
+                              if (map) {
+                                map.panTo({
+                                  lat: locationToEdit.latitude,
+                                  lng: locationToEdit.longitude,
+                                });
+                              }
+
+                              setSelectedLocation({
                                 lat: locationToEdit.latitude,
                                 lng: locationToEdit.longitude,
                               });
-                            }
-
-                            setSelectedLocation({
-                              lat: locationToEdit.latitude,
-                              lng: locationToEdit.longitude,
-                            });
-                          }, 50);
-                        }}
-                        className="mt-4 w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                      >
-                        تعديل الموقع
-                      </button>
+                            }, 50);
+                          }}
+                          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          تعديل الموقع
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDelete(selectedMarkerLocation.id)
+                          }
+                          className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          حذف الموقع
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
@@ -1598,7 +1857,10 @@ function MapPageContent() {
                 {searchQuery.trim() ? (
                   <div className="px-4 py-3">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-gray-400" dir="rtl">
+                      <h3
+                        className="text-sm font-semibold text-gray-400"
+                        dir="rtl"
+                      >
                         نتائج البحث ({filteredLocations.length})
                       </h3>
                       <button
@@ -1608,7 +1870,7 @@ function MapPageContent() {
                         مسح
                       </button>
                     </div>
-                    
+
                     {filteredLocations.length === 0 ? (
                       <div className="text-center py-12">
                         <svg
@@ -1647,7 +1909,10 @@ function MapPageContent() {
                             className="bg-gray-800 border border-gray-700 rounded-lg p-3 hover:bg-gray-750 transition-colors cursor-pointer"
                           >
                             <div className="flex items-start justify-between mb-2">
-                              <h4 className="text-white font-semibold text-sm" dir="rtl">
+                              <h4
+                                className="text-white font-semibold text-sm"
+                                dir="rtl"
+                              >
                                 {location.name || "موقع"}
                               </h4>
                               <span
@@ -1669,7 +1934,9 @@ function MapPageContent() {
                             <div className="space-y-1 text-xs">
                               {location.city && (
                                 <p className="text-gray-400" dir="rtl">
-                                  <span className="text-gray-500">المدينة:</span>{" "}
+                                  <span className="text-gray-500">
+                                    المدينة:
+                                  </span>{" "}
                                   {location.city}
                                 </p>
                               )}
@@ -1700,13 +1967,17 @@ function MapPageContent() {
                           <div className="text-2xl font-bold text-white">
                             {stats.total}
                           </div>
-                          <div className="text-xs text-gray-400 mt-1">المجموع</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            المجموع
+                          </div>
                         </div>
                         <div className="bg-green-900/30 rounded-2xl p-3 text-center border border-green-800">
                           <div className="text-2xl font-bold text-green-400">
                             {stats.approved}
                           </div>
-                          <div className="text-xs text-green-400 mt-1">موافق</div>
+                          <div className="text-xs text-green-400 mt-1">
+                            موافق
+                          </div>
                         </div>
                         <div className="bg-red-900/30 rounded-2xl p-3 text-center border border-red-800">
                           <div className="text-2xl font-bold text-red-400">

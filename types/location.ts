@@ -7,7 +7,7 @@ export interface Location {
   category: string;
   isSponsored: boolean;
   images: string[];
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   userId: string;
   user?: {
     id: string;
@@ -16,6 +16,16 @@ export interface Location {
   };
   createdAt: Date;
   updatedAt: Date;
+  belongsToRoute?: string;
+  formalPlaceName?: string;
+  notes?: string;
+  photoConfidence?: number;
+  pointType?: string;
+  side?: string;
+  street?: string;
+  path?: string;
+  dir?: string;
+  line?: string;
 }
 
 export interface LocationFormData {
@@ -29,15 +39,15 @@ export interface LocationFormData {
 }
 
 export const CATEGORIES = [
-  'Restaurant',
-  'Cafe',
-  'Park',
-  'Museum',
-  'Shopping',
-  'Entertainment',
-  'Hotel',
-  'Landmark',
-  'Other',
+  "Restaurant",
+  "Cafe",
+  "Park",
+  "Museum",
+  "Shopping",
+  "Entertainment",
+  "Hotel",
+  "Landmark",
+  "Other",
 ] as const;
 
-export type Category = typeof CATEGORIES[number];
+export type Category = (typeof CATEGORIES)[number];

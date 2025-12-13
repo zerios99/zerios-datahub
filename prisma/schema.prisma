@@ -27,6 +27,9 @@ model Location {
   pointType       String   @default("new")
   side            String?
   street          String?
+  path            String?
+  dir             String?
+  line            String?
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 

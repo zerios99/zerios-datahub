@@ -93,3 +93,52 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getSession();
+
+    if (!session) {
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Verify the location belongs to the user
+    const existingLocation = await prisma.location.findUnique({
+      where: { id },
+    });
+
+    if (!existingLocation) {
+      return NextResponse.json(
+        { error: "Location not found" },
+        { status: 404 }
+      );
+    }
+
+    if (existingLocation.userId !== session.userId) {
+      return NextResponse.json(
+        { error: "Not authorized to delete this location" },
+        { status: 403 }
+      );
+    }
+
+    // Delete the location
+    await prisma.location.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      message: "Location deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error deleting location:", error);
+    return NextResponse.json(
+      { error: "Failed to delete location" },
+      { status: 500 }
+    );
+  }
+}
