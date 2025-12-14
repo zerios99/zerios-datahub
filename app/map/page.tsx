@@ -645,26 +645,6 @@ function MapPageContent() {
     }
   };
 
-  const resetForm = () => {
-    setCity("");
-    setPopularPlaceName("");
-    setFormalPlaceName("");
-    setStreet("");
-    setSide("");
-    setCategory("");
-    setBelongsToRoute("");
-    setImages([]);
-    setPhotoConfidence("100");
-    setNotes("");
-    setPointType("new");
-    setSelectedLocation(null);
-    setMessage(null);
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-      markerRef.current = null;
-    }
-    setIsBottomSheetOpen(false);
-  };
 
   if (loading) {
     return (
@@ -1902,9 +1882,41 @@ function MapPageContent() {
                         )}
                     </div>
 
+                    {/* Open in Google Maps button - always visible */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => {
+                          const googleMapsUrl = `https://www.google.com/maps?q=${selectedMarkerLocation.latitude},${selectedMarkerLocation.longitude}`;
+                          window.open(googleMapsUrl, '_blank');
+                        }}
+                        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        فتح في خرائط جوجل
+                      </button>
+                    </div>
+
                     {/* Edit and Delete buttons - only show if user owns this location */}
                     {selectedMarkerLocation.userId === user?.id && (
-                      <div className="mt-4 flex gap-2">
+                      <div className="mt-2 flex gap-2">
                         <button
                           onClick={() => {
                             console.log(
