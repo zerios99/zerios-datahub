@@ -599,8 +599,12 @@ function MapPageContent() {
 
       let response;
       if (isEditMode && editingLocationId) {
-        // Update existing location
-        response = await fetch(`/api/user/locations/${editingLocationId}`, {
+        // Update existing location - use admin endpoint if user is admin
+        const endpoint = user?.role === 'ADMIN'
+          ? `/api/admin/locations/${editingLocationId}`
+          : `/api/user/locations/${editingLocationId}`;
+        
+        response = await fetch(endpoint, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(locationData),
@@ -1371,8 +1375,336 @@ function MapPageContent() {
             </div>
           </div>
 
-          {/* Search Results or Stats Section */}
-          {searchQuery.trim() ? (
+          {/* Search Results, Selected Location, or Stats Section */}
+          {selectedMarkerLocation ? (
+            <div className="flex-1 overflow-y-auto bg-gray-900">
+              <div className="px-4 py-4 border-b border-gray-800 bg-gray-800/50">
+                <div className="flex items-start justify-between mb-3">
+                  <h3 className="text-lg font-bold text-white" dir="rtl">
+                    {selectedMarkerLocation.name || "موقع"}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setSelectedMarkerLocation(null);
+                    }}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-2 text-sm" dir="rtl">
+                  {selectedMarkerLocation.category && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">الفئة:</span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.category}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.formalPlaceName && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        الاسم الرسمي:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.formalPlaceName}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.city && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        المدينة:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.city}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.side && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        الحي / المنطقة:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.side}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.street && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        الشارع:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.street}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.path && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        بجانب:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.path}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.dir && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        باتجاه:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.dir}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.line && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">خط سرفيس / باص:</span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.line}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.belongsToRoute && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        ينتمي للمسار:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.belongsToRoute}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-2">
+                    <span className="text-gray-400 shrink-0">
+                      الإحداثيات:
+                    </span>
+                    <span className="text-white font-mono text-xs">
+                      {selectedMarkerLocation.latitude.toFixed(6)},{" "}
+                      {selectedMarkerLocation.longitude.toFixed(6)}
+                    </span>
+                  </div>
+                  {selectedMarkerLocation.photoConfidence && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        الدقة:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.photoConfidence}%
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.isSponsored && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        ممول:
+                      </span>
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs">
+                        نعم
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.status && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        الحالة:
+                      </span>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${
+                          selectedMarkerLocation.status === "APPROVED"
+                            ? "bg-green-500/20 text-green-400"
+                            : selectedMarkerLocation.status === "REJECTED"
+                            ? "bg-red-500/20 text-red-400"
+                            : "bg-yellow-500/20 text-yellow-400"
+                        }`}
+                      >
+                        {selectedMarkerLocation.status === "APPROVED"
+                          ? "موافق عليه"
+                          : selectedMarkerLocation.status === "REJECTED"
+                          ? "مرفوض"
+                          : "قيد المراجعة"}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.images && selectedMarkerLocation.images.length > 0 && (
+                    <div className="flex flex-col gap-2 pt-2">
+                      <span className="text-gray-400">الصور:</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {selectedMarkerLocation.images.map((image: string, index: number) => (
+                          <img
+                            key={index}
+                            src={image}
+                            alt={`صورة ${index + 1}`}
+                            className="w-full h-24 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => window.open(image, '_blank')}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.notes && (
+                    <div className="flex flex-col gap-1 pt-2">
+                      <span className="text-gray-400">ملاحظات:</span>
+                      <span className="text-white bg-gray-900/50 p-2 rounded-lg">
+                        {selectedMarkerLocation.notes}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.user && (
+                    <div className="flex items-start gap-2 pt-2 border-t border-gray-700">
+                      <span className="text-gray-400 shrink-0">
+                        أضيف بواسطة:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.user.name} (
+                        {selectedMarkerLocation.user.email})
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.createdAt && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        تاريخ الإضافة:
+                      </span>
+                      <span className="text-white text-md">
+                        {new Date(
+                          selectedMarkerLocation.createdAt
+                        ).toLocaleString("ar-SY").replaceAll('/','-')}
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.updatedAt &&
+                    selectedMarkerLocation.updatedAt !==
+                      selectedMarkerLocation.createdAt && (
+                      <div className="flex items-start gap-2">
+                        <span className="text-gray-400 shrink-0">
+                          آخر تحديث:
+                        </span>
+                        <span className="text-white text-md">
+                          {new Date(
+                            selectedMarkerLocation.updatedAt
+                          ).toLocaleString("ar-SY").replaceAll('/','-')}
+                        </span>
+                      </div>
+                    )}
+                </div>
+
+                {/* Open in Google Maps button - always visible */}
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      const googleMapsUrl = `https://www.google.com/maps?q=${selectedMarkerLocation.latitude},${selectedMarkerLocation.longitude}`;
+                      window.open(googleMapsUrl, '_blank');
+                    }}
+                    className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                    فتح في خرائط جوجل
+                  </button>
+                </div>
+
+                {/* Edit and Delete buttons - only show if user owns this location */}
+                {selectedMarkerLocation.userId === user?.id && (
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => {
+                        const locationToEdit = selectedMarkerLocation;
+                        setSelectedMarkerLocation(null);
+
+                        setTimeout(() => {
+                          setIsEditMode(true);
+                          setEditingLocationId(locationToEdit.id);
+                          setCity(locationToEdit.city || "");
+                          setPopularPlaceName(locationToEdit.name || "");
+                          setFormalPlaceName(
+                            locationToEdit.formalPlaceName || ""
+                          );
+                          setStreet(locationToEdit.street || "");
+                          setSide(locationToEdit.side || "");
+                          setPath(locationToEdit.path || "");
+                          setDir(locationToEdit.dir || "");
+                          setLine(locationToEdit.line || "");
+                          setCategory(locationToEdit.category || "");
+                          setBelongsToRoute(
+                            locationToEdit.belongsToRoute || ""
+                          );
+                          setPhotoConfidence(
+                            (locationToEdit.photoConfidence || "100") as
+                              | "100"
+                              | "90"
+                          );
+                          setNotes(locationToEdit.notes || "");
+                          setPointType(
+                            (locationToEdit.pointType || "edit") as
+                              | "new"
+                              | "edit"
+                          );
+
+                          if (map) {
+                            map.panTo({
+                              lat: locationToEdit.latitude,
+                              lng: locationToEdit.longitude,
+                            });
+                          }
+
+                          setSelectedLocation({
+                            lat: locationToEdit.latitude,
+                            lng: locationToEdit.longitude,
+                          });
+                        }, 50);
+                      }}
+                      className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      تعديل الموقع
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleDelete(selectedMarkerLocation.id)
+                      }
+                      className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors"
+                    >
+                      حذف الموقع
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : searchQuery.trim() ? (
             <div className="flex-1 overflow-y-auto bg-gray-900">
               <div className="p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -1627,8 +1959,16 @@ function MapPageContent() {
                 borderBottom: "1px solid rgb(31, 41, 55)",
               }}
             >
-              <div className="flex items-center justify-between px-4 pt-3 pb-2">
-                <button
+              <div className="flex items-center justify-between px-4 pt-3">
+               
+                <div className="flex-1 flex justify-center">
+                  <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
+                </div>
+              </div>
+
+              {/* Coordinates Display */}
+              <div className="px-4  text-center border-b border-gray-800 flex items-center justify-between relative h-12">
+                 <button
                   onClick={() => {
                     setSelectedLocation(null);
                     setSelectedMarkerLocation(null);
@@ -1638,7 +1978,7 @@ function MapPageContent() {
                     }
                     setIsBottomSheetOpen(false);
                   }}
-                  className="w-10 h-10 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors"
+                  className="w-8 h-8 bg-gray-800 border border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-750 transition-colors absolute left-4 top-1/2 -translate-y-1/2 z-10"
                 >
                   <svg
                     className="w-5 h-5 text-gray-400"
@@ -1654,18 +1994,10 @@ function MapPageContent() {
                     />
                   </svg>
                 </button>
-                <div className="flex-1 flex justify-center">
-                  <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
-                </div>
-                <div className="w-10 h-2" /> {/* Spacer for centering */}
-              </div>
-
-              {/* Coordinates Display */}
-              <div className="px-4 pb-2 text-center border-b border-gray-800">
-                <div className="flex items-center justify-center gap-4 text-sm">
+                <div className="flex items-center justify-center gap-4 text-sm flex-1">
                   <div className="flex items-center gap-1">
                     <span className="text-gray-400">Lat:</span>
-                    <span className="text-white font-mono">
+                    <span className="text-white font-bold">
                       {selectedLocation?.lat.toFixed(6) ||
                         map?.getCenter()?.lat().toFixed(6) ||
                         "0.000000"}
@@ -1673,7 +2005,7 @@ function MapPageContent() {
                   </div>
                   <div className="flex items-center gap-1">
                     <span className="text-gray-400">Lng:</span>
-                    <span className="text-white font-mono">
+                    <span className="text-white font-bold">
                       {selectedLocation?.lng.toFixed(6) ||
                         map?.getCenter()?.lng().toFixed(6) ||
                         "0.000000"}
@@ -1714,6 +2046,14 @@ function MapPageContent() {
                     </div>
 
                     <div className="space-y-2 text-sm" dir="rtl">
+                      {selectedMarkerLocation.category && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">الفئة:</span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.category}
+                          </span>
+                        </div>
+                      )}
                       {selectedMarkerLocation.formalPlaceName && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
@@ -1734,6 +2074,16 @@ function MapPageContent() {
                           </span>
                         </div>
                       )}
+                      {selectedMarkerLocation.side && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-gray-400 shrink-0">
+                            الحي / المنطقة:
+                          </span>
+                          <span className="text-white">
+                            {selectedMarkerLocation.side}
+                          </span>
+                        </div>
+                      )}
                       {selectedMarkerLocation.street && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
@@ -1744,20 +2094,10 @@ function MapPageContent() {
                           </span>
                         </div>
                       )}
-                      {selectedMarkerLocation.side && (
-                        <div className="flex items-start gap-2">
-                          <span className="text-gray-400 shrink-0">
-                            الجانب:
-                          </span>
-                          <span className="text-white">
-                            {selectedMarkerLocation.side}
-                          </span>
-                        </div>
-                      )}
                       {selectedMarkerLocation.path && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
-                            مسار سرفيس او باص:
+                            بجانب:
                           </span>
                           <span className="text-white">
                             {selectedMarkerLocation.path}
@@ -1767,7 +2107,7 @@ function MapPageContent() {
                       {selectedMarkerLocation.dir && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
-                            الاتجاه:
+                            باتجاه:
                           </span>
                           <span className="text-white">
                             {selectedMarkerLocation.dir}
@@ -1776,17 +2116,19 @@ function MapPageContent() {
                       )}
                       {selectedMarkerLocation.line && (
                         <div className="flex items-start gap-2">
-                          <span className="text-gray-400 shrink-0">الخط:</span>
+                          <span className="text-gray-400 shrink-0">خط سرفيس / باص:</span>
                           <span className="text-white">
                             {selectedMarkerLocation.line}
                           </span>
                         </div>
                       )}
-                      {selectedMarkerLocation.category && (
+                      {selectedMarkerLocation.belongsToRoute && (
                         <div className="flex items-start gap-2">
-                          <span className="text-gray-400 shrink-0">الفئة:</span>
+                          <span className="text-gray-400 shrink-0">
+                            ينتمي للمسار:
+                          </span>
                           <span className="text-white">
-                            {selectedMarkerLocation.category}
+                            {selectedMarkerLocation.belongsToRoute}
                           </span>
                         </div>
                       )}
@@ -1802,22 +2144,20 @@ function MapPageContent() {
                       {selectedMarkerLocation.photoConfidence && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
-                            دقة الصورة:
+                          الدقة:
                           </span>
                           <span className="text-white">
                             {selectedMarkerLocation.photoConfidence}%
                           </span>
                         </div>
                       )}
-                      {selectedMarkerLocation.pointType && (
+                      {selectedMarkerLocation.isSponsored && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
-                            نوع النقطة:
+                            ممول:
                           </span>
-                          <span className="text-white">
-                            {selectedMarkerLocation.pointType === "new"
-                              ? "جديد"
-                              : "تعديل"}
+                          <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-full text-xs">
+                            نعم
                           </span>
                         </div>
                       )}
@@ -1843,8 +2183,24 @@ function MapPageContent() {
                           </span>
                         </div>
                       )}
+                      {selectedMarkerLocation.images && selectedMarkerLocation.images.length > 0 && (
+                        <div className="flex flex-col gap-2 pt-2">
+                          <span className="text-gray-400">الصور:</span>
+                          <div className="grid grid-cols-2 gap-2">
+                            {selectedMarkerLocation.images.map((image: string, index: number) => (
+                              <img
+                                key={index}
+                                src={image}
+                                alt={`صورة ${index + 1}`}
+                                className="w-full h-24 object-cover rounded-lg border border-gray-700 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => window.open(image, '_blank')}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {selectedMarkerLocation.notes && (
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-1 pt-2">
                           <span className="text-gray-400">ملاحظات:</span>
                           <span className="text-white bg-gray-900/50 p-2 rounded-lg">
                             {selectedMarkerLocation.notes}
@@ -1867,10 +2223,10 @@ function MapPageContent() {
                           <span className="text-gray-400 shrink-0">
                             تاريخ الإضافة:
                           </span>
-                          <span className="text-white text-xs">
+                          <span className="text-white text-md">
                             {new Date(
                               selectedMarkerLocation.createdAt
-                            ).toLocaleString("ar-EG")}
+                            ).toLocaleString("ar-SY").replaceAll('/','-')}
                           </span>
                         </div>
                       )}
@@ -1881,10 +2237,10 @@ function MapPageContent() {
                             <span className="text-gray-400 shrink-0">
                               آخر تحديث:
                             </span>
-                            <span className="text-white text-xs">
+                            <span className="text-white text-md">
                               {new Date(
                                 selectedMarkerLocation.updatedAt
-                              ).toLocaleString("ar-EG")}
+                              ).toLocaleString("ar-SY").replaceAll('/','-')}
                             </span>
                           </div>
                         )}
