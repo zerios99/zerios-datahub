@@ -6,6 +6,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Sheet } from "react-modal-sheet";
 import Image from "next/image";
 import "../modal-sheet.css";
+import { 
+  FaBus, FaWarehouse, FaShoppingBag, FaShoppingCart, FaStore, 
+  FaUtensils, FaCoffee, FaGraduationCap, FaHospital, FaPills,
+  FaMapMarkerAlt, FaMosque, FaWalking, FaCircle,
+  FaTrafficLight, FaPlus, FaTree, FaLandmark, FaFlag,
+  FaWrench, FaParking, FaGasPump, FaUniversity, FaMoneyBillWave,
+  FaFutbol, FaGlassCheers, FaHotel, FaBreadSlice, FaHome,
+  FaBuilding, FaPlane, FaCouch, FaUmbrellaBeach, FaAnchor, FaShip,
+  FaRoad, FaSubway
+} from "react-icons/fa";
 
 declare global {
   interface Window {
@@ -36,6 +46,8 @@ function MapPageContent() {
   const [dir, setDir] = useState("");
   const [line, setLine] = useState("");
   const [category, setCategory] = useState("");
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const [belongsToRoute, setBelongsToRoute] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [photoConfidence, setPhotoConfidence] = useState<"100" | "90">("100");
@@ -69,41 +81,59 @@ function MapPageContent() {
     "الحسكة",
   ];
   const CATEGORIES = [
-    "🚐 موقف سرفيس / باص",
-    "� كراج / محطة نقل",
-    "�️ سوق / شارع تجاري / سوق شعبي",
-    "🏬 مول / مركز تجاري",
-    "🏪 محل تجاري مشهور",
-    "�️ / ☕ مطعم / قهوة مشهورة",
-    "🎓 مدرسة / جامعة / معهد / روضة",
-    "🏥 مشفى / مركز طبي",
-    "📍 معلم معروف",
-    "🕌 / ⛪ جامع / كنيسة",
-    "�️ جسر / نفق",
-    "🚶‍♂️ نفق مشاة / جسر مشاة",
-    "🔄 دوّار",
-    "🚦 إشارة مرور",
-    "➕ تقاطع طرق",
-    "🌳 حديقة / ساحة",
-    "🏛️ دائرة حكومية",
-    "🛂 سفارة / قنصلية",
-    "🔧 ورشة صيانة",
-    "🅿️ موقف سيارات",
-    "⛽ محطة وقود",
-    "� مصرف / صراف آلي",
-    "💸 شركة صرافة",
-    "⚽ منشأة رياضية (ملعب / نادي / صالة)",
-    "🎉 صالة مناسبات (أفراح / تعازي)",
-    "🏨 فندق",
-    "🥖 فرن / مخبز",
-    "🏠 مدخل بناية / مدخل حي",
-    "🏢 شركة / مكتب",
-    "🛬 مطار",
-    "🛋️ استراحة",
-    "🏖️ شاطئ / كورنيش",
-    "⚓ ميناء / مرفأ بحري",
-    "🚤 مرسى قوارب",
+    { icon: FaBus, label: "موقف سرفيس / باص", value: "موقف سرفيس / باص" },
+    { icon: FaWarehouse, label: "كراج / محطة نقل", value: "كراج / محطة نقل" },
+    { icon: FaShoppingBag, label: "سوق / شارع تجاري / سوق شعبي", value: "سوق / شارع تجاري / سوق شعبي" },
+    { icon: FaShoppingCart, label: "مول / مركز تجاري", value: "مول / مركز تجاري" },
+    { icon: FaStore, label: "محل تجاري مشهور", value: "محل تجاري مشهور" },
+    { icon: FaUtensils, label: "مطعم / قهوة مشهورة", value: "مطعم / قهوة مشهورة" },
+    { icon: FaGraduationCap, label: "مدرسة / جامعة / معهد / روضة", value: "مدرسة / جامعة / معهد / روضة" },
+    { icon: FaHospital, label: "مشفى / مركز طبي", value: "مشفى / مركز طبي" },
+    { icon: FaPills, label: "صيدلية", value: "صيدلية" },
+    { icon: FaMapMarkerAlt, label: "معلم معروف", value: "معلم معروف" },
+    { icon: FaMosque, label: "جامع / كنيسة", value: "جامع / كنيسة" },
+    { icon: FaRoad, label: "جسر / نفق", value: "جسر / نفق" },
+    { icon: FaWalking, label: "نفق مشاة / جسر مشاة", value: "نفق مشاة / جسر مشاة" },
+    { icon: FaCircle, label: "دوّار", value: "دوّار" },
+    { icon: FaTrafficLight, label: "إشارة مرور", value: "إشارة مرور" },
+    { icon: FaPlus, label: "تقاطع طرق", value: "تقاطع طرق" },
+    { icon: FaTree, label: "حديقة / ساحة", value: "حديقة / ساحة" },
+    { icon: FaLandmark, label: "دائرة حكومية", value: "دائرة حكومية" },
+    { icon: FaFlag, label: "سفارة / قنصلية", value: "سفارة / قنصلية" },
+    { icon: FaWrench, label: "ورشة صيانة", value: "ورشة صيانة" },
+    { icon: FaParking, label: "موقف سيارات", value: "موقف سيارات" },
+    { icon: FaGasPump, label: "محطة وقود", value: "محطة وقود" },
+    { icon: FaUniversity, label: "مصرف / صراف آلي", value: "مصرف / صراف آلي" },
+    { icon: FaMoneyBillWave, label: "شركة صرافة", value: "شركة صرافة" },
+    { icon: FaFutbol, label: "منشأة رياضية (ملعب / نادي / صالة)", value: "منشأة رياضية (ملعب / نادي / صالة)" },
+    { icon: FaGlassCheers, label: "صالة مناسبات (أفراح / تعازي)", value: "صالة مناسبات (أفراح / تعازي)" },
+    { icon: FaHotel, label: "فندق", value: "فندق" },
+    { icon: FaBreadSlice, label: "فرن / مخبز", value: "فرن / مخبز" },
+    { icon: FaHome, label: "مدخل بناية / مدخل حي", value: "مدخل بناية / مدخل حي" },
+    { icon: FaBuilding, label: "شركة / مكتب", value: "شركة / مكتب" },
+    { icon: FaPlane, label: "مطار", value: "مطار" },
+    { icon: FaCouch, label: "استراحة", value: "استراحة" },
+    { icon: FaUmbrellaBeach, label: "شاطئ / كورنيش", value: "شاطئ / كورنيش" },
+    { icon: FaAnchor, label: "ميناء / مرفأ بحري", value: "ميناء / مرفأ بحري" },
+    { icon: FaShip, label: "مرسى قوارب", value: "مرسى قوارب" },
   ];
+
+  const getCategoryIcon = (categoryValue: string) => {
+    const category = CATEGORIES.find(cat => cat.value === categoryValue);
+    return category ? category.icon : FaMapMarkerAlt;
+  };
+
+  const getCategoryDisplay = (categoryValue: string) => {
+    const category = CATEGORIES.find(cat => cat.value === categoryValue);
+    if (!category) return categoryValue;
+    const Icon = category.icon;
+    return (
+      <span className="flex items-center gap-2">
+        <Icon className="shrink-0" />
+        <span>{category.label}</span>
+      </span>
+    );
+  };
 
   // Mobile bottom sheet state
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(true);
@@ -203,6 +233,23 @@ function MapPageContent() {
       };
     }
   }, [isMobile]);
+
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryDropdownOpen(false);
+      }
+    };
+
+    if (isCategoryDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isCategoryDropdownOpen]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -1081,24 +1128,26 @@ function MapPageContent() {
 
       {/* 9. Category - التصنيف */}
       <div>
-        <div className="relative">
-          <select
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full pr-14 pl-12 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 appearance-none peer"
+        <div className="relative" ref={categoryDropdownRef}>
+          <button
+            type="button"
+            onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+            className="w-full pr-14 pl-12 py-4 bg-gray-800 border-2 border-gray-700 rounded-xl text-white text-base focus:outline-none focus:border-blue-500 appearance-none text-right"
             style={{ direction: "rtl" }}
-            required
           >
-            <option value=""></option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+            {category ? (
+              <span className="flex items-center gap-2">
+                {(() => {
+                  const Icon = getCategoryIcon(category);
+                  return <Icon className="shrink-0" />;
+                })()}
+                <span>{CATEGORIES.find(cat => cat.value === category)?.label || category}</span>
+              </span>
+            ) : (
+              <span className="text-gray-400"></span>
+            )}
+          </button>
           <label
-            htmlFor="category"
             className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
               category
                 ? "-top-3 text-sm text-blue-400"
@@ -1108,7 +1157,7 @@ function MapPageContent() {
           >
             التصنيف *
           </label>
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg
               className="w-5 h-5"
               fill="none"
@@ -1125,7 +1174,9 @@ function MapPageContent() {
           </div>
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg
-              className="w-5 h-5"
+              className={`w-5 h-5 transition-transform ${
+                isCategoryDropdownOpen ? "rotate-180" : ""
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1138,6 +1189,28 @@ function MapPageContent() {
               />
             </svg>
           </div>
+          {isCategoryDropdownOpen && (
+            <div className="absolute z-50 w-full mt-2 bg-gray-800 border-2 border-gray-700 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+              {CATEGORIES.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <button
+                    key={cat.value}
+                    type="button"
+                    onClick={() => {
+                      setCategory(cat.value);
+                      setIsCategoryDropdownOpen(false);
+                    }}
+                    className="w-full px-4 py-3 text-right hover:bg-gray-700 transition-colors flex items-center gap-3 text-white"
+                    style={{ direction: "rtl" }}
+                  >
+                    <Icon className="shrink-0 text-lg" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1409,8 +1482,8 @@ function MapPageContent() {
                   {selectedMarkerLocation.category && (
                     <div className="flex items-start gap-2">
                       <span className="text-gray-400 shrink-0">الفئة:</span>
-                      <span className="text-white">
-                        {selectedMarkerLocation.category}
+                      <span className="text-white flex items-center gap-2">
+                        {getCategoryDisplay(selectedMarkerLocation.category)}
                       </span>
                     </div>
                   )}
@@ -1638,8 +1711,8 @@ function MapPageContent() {
                   </button>
                 </div>
 
-                {/* Edit and Delete buttons - only show if user owns this location */}
-                {selectedMarkerLocation.userId === user?.id && (
+                {/* Edit and Delete buttons - show if user owns this location or is admin */}
+                {(selectedMarkerLocation.userId === user?.id || user?.role === 'ADMIN') && (
                   <div className="mt-2 flex gap-2">
                     <button
                       onClick={() => {
@@ -2049,8 +2122,8 @@ function MapPageContent() {
                       {selectedMarkerLocation.category && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">الفئة:</span>
-                          <span className="text-white">
-                            {selectedMarkerLocation.category}
+                          <span className="text-white flex items-center gap-2">
+                            {getCategoryDisplay(selectedMarkerLocation.category)}
                           </span>
                         </div>
                       )}
@@ -2278,8 +2351,8 @@ function MapPageContent() {
                       </button>
                     </div>
 
-                    {/* Edit and Delete buttons - only show if user owns this location */}
-                    {selectedMarkerLocation.userId === user?.id && (
+                    {/* Edit and Delete buttons - show if user owns this location or is admin */}
+                    {(selectedMarkerLocation.userId === user?.id || user?.role === 'ADMIN') && (
                       <div className="mt-2 flex gap-2">
                         <button
                           onClick={() => {
