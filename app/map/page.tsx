@@ -327,12 +327,17 @@ function MapPageContent() {
           setIsEditMode(true);
           setEditingLocationId(editLocationId);
 
-          const response = await fetch("/api/user/locations");
+          // Admins can edit any location, regular users can only edit their own
+          const endpoint = user.role === 'ADMIN' 
+            ? `/api/admin/locations?id=${editLocationId}`
+            : "/api/user/locations";
+          
+          const response = await fetch(endpoint);
           if (response.ok) {
             const data = await response.json();
-            const location = data.locations.find(
-              (loc: any) => loc.id === editLocationId
-            );
+            const location = user.role === 'ADMIN'
+              ? data.locations[0] // Admin endpoint returns filtered list
+              : data.locations.find((loc: any) => loc.id === editLocationId);
 
             if (location) {
               // Pre-populate form fields
@@ -342,6 +347,9 @@ function MapPageContent() {
               setFormalPlaceName(location.formalPlaceName || "");
               setStreet(location.street || "");
               setSide(location.side || "");
+              setPath(location.path || "");
+              setDir(location.dir || "");
+              setLine(location.line || "");
               setBelongsToRoute(location.belongsToRoute || "");
               setNotes(location.notes || "");
               setPhotoConfidence(location.photoConfidence || "100");

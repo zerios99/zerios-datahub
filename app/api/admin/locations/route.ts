@@ -16,10 +16,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const userId = searchParams.get('userId');
+    const id = searchParams.get('id');
 
     const where: Record<string, string> = {};
     if (status) where.status = status;
     if (userId) where.userId = userId;
+    if (id) where.id = id;
 
     const locations = await prisma.location.findMany({
       where,

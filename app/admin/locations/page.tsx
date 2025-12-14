@@ -14,16 +14,6 @@ function AdminLocationsContent() {
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
   const [userFilter, setUserFilter] = useState(searchParams.get('userId') || '');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    city: '',
-    category: '',
-    isSponsored: false,
-    status: 'PENDING',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'ADMIN')) {
@@ -72,29 +62,6 @@ function AdminLocationsContent() {
     }
   };
 
-  const handleEditLocation = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedLocation) return;
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch(`/api/admin/locations/${selectedLocation.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        setShowEditModal(false);
-        setSelectedLocation(null);
-        fetchLocations();
-      }
-    } catch (error) {
-      console.error('Error updating location:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const handleDeleteLocation = async (locationId: string) => {
     if (!confirm('Are you sure you want to delete this location?')) {
@@ -114,17 +81,6 @@ function AdminLocationsContent() {
     }
   };
 
-  const openEditModal = (location: Location) => {
-    setSelectedLocation(location);
-    setFormData({
-      name: location.name,
-      city: location.city,
-      category: location.category,
-      isSponsored: location.isSponsored,
-      status: location.status,
-    });
-    setShowEditModal(true);
-  };
 
   const handleLogout = async () => {
     await logout();
@@ -262,13 +218,43 @@ function AdminLocationsContent() {
                       {getStatusBadge(location.status)}
                     </div>
                     
-                    <div className="text-sm text-gray-600 mb-2">
-                      <span className="font-medium">Category:</span> {location.category}
-                      {location.isSponsored && (
-                        <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded">
-                          Sponsored
-                        </span>
+                    <div className="text-sm text-gray-600 mb-2 space-y-1">
+                      <div>
+                        <span className="font-medium">Category:</span> {location.category}
+                        {location.isSponsored && (
+                          <span className="ml-2 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded">
+                            Sponsored
+                          </span>
+                        )}
+                      </div>
+                      {location.formalPlaceName && (
+                        <div className="text-xs">
+                          <span className="font-medium">Formal Name:</span> {location.formalPlaceName}
+                        </div>
                       )}
+                      {location.street && (
+                        <div className="text-xs">
+                          <span className="font-medium">Street:</span> {location.street}
+                        </div>
+                      )}
+                      {location.side && (
+                        <div className="text-xs">
+                          <span className="font-medium">Side:</span> {location.side}
+                        </div>
+                      )}
+                      {location.path && (
+                        <div className="text-xs">
+                          <span className="font-medium">Path:</span> {location.path}
+                        </div>
+                      )}
+                      {location.pointType && (
+                        <div className="text-xs">
+                          <span className="font-medium">Type:</span> {location.pointType === 'new' ? 'New' : 'Edit'}
+                        </div>
+                      )}
+                      <div className="text-xs">
+                        <span className="font-medium">Coordinates:</span> {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
+                      </div>
                     </div>
                     
                     {location.user && (
@@ -296,7 +282,7 @@ function AdminLocationsContent() {
                         </>
                       )}
                       <button
-                        onClick={() => openEditModal(location)}
+                        onClick={() => router.push(`/map?edit=${location.id}`)}
                         className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                       >
                         Edit
@@ -316,94 +302,6 @@ function AdminLocationsContent() {
         )}
       </div>
 
-      {/* Edit Location Modal */}
-      {showEditModal && selectedLocation && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Location</h3>
-            <form onSubmit={handleEditLocation} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-                <input
-                  type="text"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="PENDING">Pending</option>
-                  <option value="APPROVED">Approved</option>
-                  <option value="REJECTED">Rejected</option>
-                </select>
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isSponsored"
-                  checked={formData.isSponsored}
-                  onChange={(e) => setFormData({ ...formData, isSponsored: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isSponsored" className="ml-2 block text-sm text-gray-700">
-                  Sponsored
-                </label>
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditModal(false);
-                    setSelectedLocation(null);
-                  }}
-                  className="px-4 py-2 text-gray-700 hover:text-gray-900"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-                >
-                  {isSubmitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
