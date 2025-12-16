@@ -37,6 +37,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const theme = localStorage.getItem('theme');
@@ -262,7 +263,38 @@ export default function AdminUsersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      <div className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900 text-white shadow-2xl z-30">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="lg:hidden fixed top-4 right-4 z-40 p-2 bg-gray-900 dark:bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile Menu Backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/50 z-20"
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900 text-white shadow-2xl z-30 transform transition-transform duration-300 ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+      } lg:translate-x-0`}>
+        {/* Close Button for Mobile */}
+        <button
+          onClick={() => setIsMobileMenuOpen(false)}
+          className="lg:hidden absolute top-6 right-4 text-gray-400 hover:text-white transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
         <div className="p-6 border-b border-gray-700 dark:border-gray-800">
           <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
             Admin Panel
@@ -273,6 +305,7 @@ export default function AdminUsersPage() {
         <nav className="mt-6">
           <Link
             href="/admin"
+            onClick={() => setIsMobileMenuOpen(false)}
             className="flex items-center px-6 py-3 text-gray-300 dark:text-gray-400 hover:bg-gray-700/50 dark:hover:bg-gray-800/50 hover:text-white transition-all duration-200 border-l-4 border-transparent hover:border-blue-500"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
@@ -282,6 +315,7 @@ export default function AdminUsersPage() {
           </Link>
           <Link
             href="/admin/users"
+            onClick={() => setIsMobileMenuOpen(false)}
             className="flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white border-l-4 border-blue-400 dark:border-blue-500 shadow-lg"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
@@ -291,6 +325,7 @@ export default function AdminUsersPage() {
           </Link>
           <Link
             href="/admin/locations"
+            onClick={() => setIsMobileMenuOpen(false)}
             className="flex items-center px-6 py-3 text-gray-300 dark:text-gray-400 hover:bg-gray-700/50 dark:hover:bg-gray-800/50 hover:text-white transition-all duration-200 border-l-4 border-transparent hover:border-blue-500"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3" viewBox="0 0 20 20" fill="currentColor">
@@ -605,6 +640,7 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
+      {/* Add Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200">
@@ -686,6 +722,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
+      {/* Edit Modal */}
       {showEditModal && selectedUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200">
