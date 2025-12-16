@@ -6,8 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Sheet } from "react-modal-sheet";
 import Image from "next/image";
 import "../modal-sheet.css";
-import { 
-  FaBus, FaWarehouse, FaShoppingBag, FaShoppingCart, FaStore, 
+import {
+  FaBus, FaWarehouse, FaShoppingBag, FaShoppingCart, FaStore,
   FaUtensils, FaCoffee, FaGraduationCap, FaHospital, FaPills,
   FaMapMarkerAlt, FaMosque, FaWalking, FaCircle,
   FaTrafficLight, FaPlus, FaTree, FaLandmark, FaFlag,
@@ -118,6 +118,59 @@ function MapPageContent() {
     { icon: FaShip, label: "مرسى قوارب", value: "مرسى قوارب" },
   ];
 
+  // Color map for category pins
+  const categoryColors: { [key: string]: string } = {
+    "موقف سرفيس / باص": "#1E88E5", // Blue
+    "كراج / محطة نقل": "#42A5F5", // Light blue
+    "سوق / شارع تجاري / سوق شعبي": "#4CAF50", // Green
+    "مول / مركز تجاري": "#66BB6A", // Light green
+    "محل تجاري مشهور": "#81C784", // Lighter green
+    "مطعم / قهوة مشهورة": "#FF9800", // Orange
+    "مدرسة / جامعة / معهد / روضة": "#9C27B0", // Purple
+    "مشفى / مركز طبي": "#F44336", // Red
+    "صيدلية": "#EF5350", // Light red
+    "معلم معروف": "#795548", // Brown
+    "جامع / كنيسة": "#8D6E63", // Light brown
+    "جسر / نفق": "#757575", // Gray
+    "نفق مشاة / جسر مشاة": "#9E9E9E", // Light gray
+    "دوّار": "#BDBDBD", // Lighter gray
+    "إشارة مرور": "#FF5722", // Deep orange
+    "تقاطع طرق": "#FF7043", // Light deep orange
+    "حديقة / ساحة": "#689F38", // Dark green
+    "دائرة حكومية": "#1565C0", // Dark blue
+    "سفارة / قنصلية": "#1976D2", // Blue
+    "ورشة صيانة": "#F57C00", // Amber
+    "موقف سيارات": "#FFB74D", // Light amber
+    "محطة وقود": "#FF8A65", // Light red-orange
+    "مصرف / صراف آلي": "#FFD54F", // Yellow
+    "شركة صرافة": "#FFEB3B", // Light yellow
+    "منشأة رياضية (ملعب / نادي / صالة)": "#E91E63", // Pink
+    "صالة مناسبات (أفراح / تعازي)": "#F06292", // Light pink
+    "فندق": "#00BCD4", // Cyan
+    "فرن / مخبز": "#FFCC02", // Gold
+    "مدخل بناية / مدخل حي": "#607D8B", // Blue gray
+    "شركة / مكتب": "#78909C", // Light blue gray
+    "مطار": "#0097A7", // Teal
+    "استراحة": "#4DB6AC", // Light teal
+    "شاطئ / كورنيش": "#26A69A", // Green teal
+    "ميناء / مرفأ بحري": "#00897B", // Dark teal
+    "مرسى قوارب": "#4CAF50", // Green
+  };
+
+  // Function to get colored pin icon
+  const getPinIcon = (category: string) => {
+    const color = categoryColors[category] || "#FF0000"; // Default red
+    const svg = `<svg width="30" height="47" viewBox="0 0 30 47" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 0C6.716 0 0 6.716 0 15c0 7.5 12 27 15 32s15-24.5 15-32C30 6.716 23.284 0 15 0z" fill="${color}"/>
+      <circle cx="15" cy="15" r="6" fill="white"/>
+    </svg>`;
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new window.google.maps.Size(30, 47),
+      anchor: new window.google.maps.Point(15, 47),
+    };
+  };
+
   const getCategoryIcon = (categoryValue: string) => {
     const category = CATEGORIES.find(cat => cat.value === categoryValue);
     return category ? category.icon : FaMapMarkerAlt;
@@ -140,6 +193,9 @@ function MapPageContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [currentSnapIndex, setCurrentSnapIndex] = useState(4);
   const sheetRef = useRef<any>(null);
+const centerMarkerRef = useRef<google.maps.Marker | null>(null);
+
+
 
   // All locations and markers state
   const [allLocations, setAllLocations] = useState<any[]>([]);
@@ -338,11 +394,7 @@ function MapPageContent() {
         position: { lat: location.latitude, lng: location.longitude },
         map: map,
         title: location.name,
-        icon: {
-          url: "/mapPin.svg",
-          scaledSize: new window.google.maps.Size(30, 47),
-          anchor: new window.google.maps.Point(15, 47),
-        },
+        icon: getPinIcon(location.category),
       });
 
       // Add click listener to show location info
@@ -375,10 +427,10 @@ function MapPageContent() {
           setEditingLocationId(editLocationId);
 
           // Admins can edit any location, regular users can only edit their own
-          const endpoint = user.role === 'ADMIN' 
+          const endpoint = user.role === 'ADMIN'
             ? `/api/admin/locations?id=${editLocationId}`
             : "/api/user/locations";
-          
+
           const response = await fetch(endpoint);
           if (response.ok) {
             const data = await response.json();
@@ -424,87 +476,252 @@ function MapPageContent() {
       loadLocationForEdit();
     }
   }, [editLocationId, user]);
-
-  // Initialize Google Maps
-  useEffect(() => {
-    const initMap = () => {
-      if (!window.google) {
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&language=ar`;
-        script.async = true;
-        script.defer = true;
-        script.onload = () => initMap();
-        document.head.appendChild(script);
-        return;
-      }
-
-      if (mapRef.current && window.google) {
-        // Get current location or fallback to Damascus
-        const getCurrentLocation = () => {
-          return new Promise<{ lat: number; lng: number }>((resolve) => {
-            if (navigator.geolocation) {
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  resolve({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                  });
-                },
-                () => {
-                  // Fallback to Damascus
-                  resolve({ lat: 33.5138, lng: 36.2765 });
-                }
-              );
-            } else {
-              resolve({ lat: 33.5138, lng: 36.2765 });
-            }
-          });
-        };
-
-        getCurrentLocation().then((center) => {
-          const mapInstance = new window.google.maps.Map(mapRef.current!, {
-            center,
-            zoom: 15,
-            mapTypeId: "hybrid",
-            mapTypeControl: false,
-            fullscreenControl: false,
-            gestureHandling: "greedy", // Allow single-finger dragging on mobile
-            language: "ar", // Arabic language
-          });
-
-          setMap(mapInstance);
-
-          // Set initial selectedLocation to map center
-          setSelectedLocation({
-            lat: center.lat,
-            lng: center.lng,
-          });
-
-          // Update selectedLocation when map drag ends (not on every center change)
-          mapInstance.addListener("dragend", () => {
-            const mapCenter = mapInstance.getCenter();
-            if (mapCenter) {
-              setSelectedLocation({
-                lat: mapCenter.lat(),
-                lng: mapCenter.lng(),
-              });
-            }
-          });
-
-          // Open bottom sheet on mobile when map is first clicked/dragged
-          mapInstance.addListener("dragstart", () => {
-            if (window.innerWidth < 768 && !isBottomSheetOpen) {
-              setIsBottomSheetOpen(true);
-            }
-          });
-        });
-      }
-    };
-
-    if (user) {
-      initMap();
+  
+useEffect(() => {
+  const initMap = () => {
+    if (!window.google) {
+      const script = document.createElement("script");
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places&language=ar`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => initMap();
+      document.head.appendChild(script);
+      return;
     }
-  }, [user, isBottomSheetOpen]);
+
+    if (mapRef.current && window.google) {
+      const getCurrentLocation = () => {
+        return new Promise<{ lat: number; lng: number }>((resolve) => {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                resolve({
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude,
+                });
+              },
+              () => {
+                resolve({ lat: 33.5138, lng: 36.2765 });
+              }
+            );
+          } else {
+            resolve({ lat: 33.5138, lng: 36.2765 });
+          }
+        });
+      };
+
+      getCurrentLocation().then((center) => {
+        const mapInstance = new window.google.maps.Map(mapRef.current!, {
+          center,
+          zoom: 15,
+          mapTypeId: "hybrid",
+          mapTypeControl: false,
+          fullscreenControl: false,
+          gestureHandling: "greedy",
+          language: "ar",
+        });
+
+        setMap(mapInstance);
+        setSelectedLocation({
+          lat: center.lat,
+          lng: center.lng,
+        });
+
+        // ✅ SUPER SMOOTH CENTER PIN - Custom Overlay
+        class SmoothCenterPin extends window.google.maps.OverlayView {
+          private container: HTMLDivElement | null = null;
+          private pin: HTMLImageElement | null = null;
+          private isDragging = false;
+          private isZooming = false;
+          private zoomTimeout: NodeJS.Timeout | null = null;
+
+          onAdd() {
+            // Create container
+            this.container = document.createElement('div');
+            this.container.style.position = 'absolute';
+            this.container.style.cursor = 'pointer';
+            this.container.style.zIndex = '1000';
+            
+            // Create pin image
+            this.pin = document.createElement('img');
+            this.pin.src = '/mapPin.svg';
+            this.pin.style.width = '42px';
+            this.pin.style.height = '66px';
+            this.pin.style.position = 'absolute';
+            this.pin.style.left = '50%';
+            this.pin.style.bottom = '0';
+            this.pin.style.transform = 'translateX(-50%)';
+            this.pin.style.transformOrigin = 'center bottom';
+            
+            // Smooth CSS transitions
+            this.pin.style.transition = 'transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)';
+            this.pin.style.willChange = 'transform';
+            
+            this.container.appendChild(this.pin);
+
+            // Add to map
+            const panes = this.getPanes();
+            if (panes) {
+              panes.overlayMouseTarget.appendChild(this.container);
+            }
+
+            // Initial drop animation
+            if (this.pin) {
+              this.pin.style.transform = 'translateX(-50%) translateY(-100px)';
+              setTimeout(() => {
+                if (this.pin) {
+                  this.pin.style.transform = 'translateX(-50%) translateY(0)';
+                }
+              }, 100);
+            }
+          }
+
+          draw() {
+            if (!this.container) return;
+
+            const projection = this.getProjection();
+            const center = mapInstance.getCenter();
+            
+            if (center && projection) {
+              const point = projection.fromLatLngToDivPixel(center);
+              if (point) {
+                this.container.style.left = point.x + 'px';
+                this.container.style.top = point.y + 'px';
+              }
+            }
+          }
+
+          // Lift animation on zoom/drag
+          lift() {
+            if (this.pin) {
+              this.pin.style.transform = 'translateX(-50%) translateY(-8px) scale(1.12)';
+            }
+          }
+
+          // Settle animation
+          settle() {
+            if (this.pin) {
+              this.pin.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+            }
+          }
+
+          // Bounce animation
+          bounce() {
+            if (!this.pin) return;
+            
+            // Change to elastic timing for bounce
+            this.pin.style.transition = 'transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
+            this.pin.style.transform = 'translateX(-50%) translateY(-24px) scale(1)';
+            
+            setTimeout(() => {
+              if (this.pin) {
+                this.pin.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                
+                // Restore smooth timing
+                setTimeout(() => {
+                  if (this.pin) {
+                    this.pin.style.transition = 'transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1)';
+                  }
+                }, 600);
+              }
+            }, 50);
+          }
+
+          // Handle dragging
+          setDragging(dragging: boolean) {
+            this.isDragging = dragging;
+            if (dragging) {
+              this.lift();
+            }
+          }
+
+          // Handle zooming
+          handleZoom() {
+            this.isZooming = true;
+            this.lift();
+
+            if (this.zoomTimeout) {
+              clearTimeout(this.zoomTimeout);
+            }
+
+            this.zoomTimeout = setTimeout(() => {
+              this.settle();
+              this.isZooming = false;
+              this.draw(); // Redraw at new position
+            }, 300);
+          }
+
+          onRemove() {
+            if (this.container && this.container.parentNode) {
+              this.container.parentNode.removeChild(this.container);
+            }
+            this.container = null;
+            this.pin = null;
+          }
+        }
+
+        // Create and set the smooth pin
+        const smoothPin = new SmoothCenterPin();
+        smoothPin.setMap(mapInstance);
+        centerMarkerRef.current = smoothPin as any;
+
+        // Zoom animation
+        mapInstance.addListener('zoom_changed', () => {
+          smoothPin.handleZoom();
+        });
+
+        // Center changed - redraw position
+        mapInstance.addListener('center_changed', () => {
+          if (!smoothPin.isDragging && !smoothPin.isZooming) {
+            smoothPin.draw();
+          }
+        });
+
+        // Drag start
+        mapInstance.addListener('dragstart', () => {
+          smoothPin.setDragging(true);
+          
+          if (window.innerWidth < 768 && !isBottomSheetOpen) {
+            setIsBottomSheetOpen(true);
+          }
+        });
+
+        // During drag
+        mapInstance.addListener('drag', () => {
+          smoothPin.draw();
+        });
+
+        // Drag end
+        mapInstance.addListener('dragend', () => {
+          smoothPin.setDragging(false);
+          
+          const mapCenter = mapInstance.getCenter();
+          if (mapCenter) {
+            setSelectedLocation({
+              lat: mapCenter.lat(),
+              lng: mapCenter.lng(),
+            });
+            
+            // Bounce on drag end
+            smoothPin.bounce();
+          }
+        });
+      });
+    }
+  };
+
+  if (user) {
+    initMap();
+  }
+
+  // Cleanup
+  return () => {
+    if (centerMarkerRef.current && centerMarkerRef.current.setMap) {
+      centerMarkerRef.current.setMap(null);
+    }
+  };
+}, [user, isBottomSheetOpen]);
+
 
   // When editing, center map on the location
   useEffect(() => {
@@ -650,7 +867,7 @@ function MapPageContent() {
         const endpoint = user?.role === 'ADMIN'
           ? `/api/admin/locations/${editingLocationId}`
           : `/api/user/locations/${editingLocationId}`;
-        
+
         response = await fetch(endpoint, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -795,11 +1012,10 @@ function MapPageContent() {
           </select>
           <label
             htmlFor="city"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              city
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${city
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             المدينة *
@@ -852,11 +1068,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="side"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              side
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${side
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             الحي / المنطقة *
@@ -893,11 +1108,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="street"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              street
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${street
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             اسم الشارع
@@ -935,11 +1149,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="popularPlaceName"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              popularPlaceName
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${popularPlaceName
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             الاسم الشعبي الشائع للمكان *
@@ -976,11 +1189,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="formalPlaceName"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              formalPlaceName
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${formalPlaceName
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             الاسم الرسمي للمكان
@@ -1017,11 +1229,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="path"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              path
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${path
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             بجانب
@@ -1058,11 +1269,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="dir"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              dir
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${dir
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             باتجاه
@@ -1099,11 +1309,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="line"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              line
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${line
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             خط سرفيس / باص
@@ -1148,11 +1357,10 @@ function MapPageContent() {
             )}
           </button>
           <label
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              category
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${category
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             التصنيف *
@@ -1174,9 +1382,8 @@ function MapPageContent() {
           </div>
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
             <svg
-              className={`w-5 h-5 transition-transform ${
-                isCategoryDropdownOpen ? "rotate-180" : ""
-              }`}
+              className={`w-5 h-5 transition-transform ${isCategoryDropdownOpen ? "rotate-180" : ""
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1348,11 +1555,10 @@ function MapPageContent() {
           />
           <label
             htmlFor="notes"
-            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${
-              notes
+            className={`absolute right-10 bg-gray-800 px-2 text-gray-400 transition-all pointer-events-none ${notes
                 ? "-top-3 text-sm text-blue-400"
                 : "top-1/2 -translate-y-1/2 text-base peer-focus:-top-3 peer-focus:text-sm peer-focus:text-blue-400"
-            }`}
+              }`}
             style={{ direction: "rtl" }}
           >
             ملاحظة
@@ -1377,11 +1583,10 @@ function MapPageContent() {
 
       {message && (
         <div
-          className={`p-4 rounded-2xl text-base ${
-            message.type === "success"
+          className={`p-4 rounded-2xl text-base ${message.type === "success"
               ? "bg-green-900/50 text-green-200 border border-green-800"
               : "bg-red-900/50 text-red-200 border border-red-800"
-          }`}
+            }`}
         >
           {message.text}
         </div>
@@ -1600,19 +1805,18 @@ function MapPageContent() {
                         الحالة:
                       </span>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          selectedMarkerLocation.status === "APPROVED"
+                        className={`px-2 py-1 rounded-full text-xs ${selectedMarkerLocation.status === "APPROVED"
                             ? "bg-green-500/20 text-green-400"
                             : selectedMarkerLocation.status === "REJECTED"
-                            ? "bg-red-500/20 text-red-400"
-                            : "bg-yellow-500/20 text-yellow-400"
-                        }`}
+                              ? "bg-red-500/20 text-red-400"
+                              : "bg-yellow-500/20 text-yellow-400"
+                          }`}
                       >
                         {selectedMarkerLocation.status === "APPROVED"
                           ? "موافق عليه"
                           : selectedMarkerLocation.status === "REJECTED"
-                          ? "مرفوض"
-                          : "قيد المراجعة"}
+                            ? "مرفوض"
+                            : "قيد المراجعة"}
                       </span>
                     </div>
                   )}
@@ -1659,13 +1863,13 @@ function MapPageContent() {
                       <span className="text-white text-md">
                         {new Date(
                           selectedMarkerLocation.createdAt
-                        ).toLocaleString("ar-SY").replaceAll('/','-')}
+                        ).toLocaleString("ar-SY").replaceAll('/', '-')}
                       </span>
                     </div>
                   )}
                   {selectedMarkerLocation.updatedAt &&
                     selectedMarkerLocation.updatedAt !==
-                      selectedMarkerLocation.createdAt && (
+                    selectedMarkerLocation.createdAt && (
                       <div className="flex items-start gap-2">
                         <span className="text-gray-400 shrink-0">
                           آخر تحديث:
@@ -1673,7 +1877,7 @@ function MapPageContent() {
                         <span className="text-white text-md">
                           {new Date(
                             selectedMarkerLocation.updatedAt
-                          ).toLocaleString("ar-SY").replaceAll('/','-')}
+                          ).toLocaleString("ar-SY").replaceAll('/', '-')}
                         </span>
                       </div>
                     )}
@@ -1738,14 +1942,14 @@ function MapPageContent() {
                           );
                           setPhotoConfidence(
                             (locationToEdit.photoConfidence || "100") as
-                              | "100"
-                              | "90"
+                            | "100"
+                            | "90"
                           );
                           setNotes(locationToEdit.notes || "");
                           setPointType(
                             (locationToEdit.pointType || "edit") as
-                              | "new"
-                              | "edit"
+                            | "new"
+                            | "edit"
                           );
 
                           if (map) {
@@ -1878,19 +2082,18 @@ function MapPageContent() {
                             </div>
                             <div className="mt-2">
                               <span
-                                className={`inline-block px-2 py-0.5 rounded-full text-xs ${
-                                  location.status === "APPROVED"
+                                className={`inline-block px-2 py-0.5 rounded-full text-xs ${location.status === "APPROVED"
                                     ? "bg-green-500/20 text-green-400"
                                     : location.status === "REJECTED"
-                                    ? "bg-red-500/20 text-red-400"
-                                    : "bg-yellow-500/20 text-yellow-400"
-                                }`}
+                                      ? "bg-red-500/20 text-red-400"
+                                      : "bg-yellow-500/20 text-yellow-400"
+                                  }`}
                               >
                                 {location.status === "APPROVED"
                                   ? "✓ موافق"
                                   : location.status === "REJECTED"
-                                  ? "✗ مرفوض"
-                                  : "⏳ قيد المراجعة"}
+                                    ? "✗ مرفوض"
+                                    : "⏳ قيد المراجعة"}
                               </span>
                             </div>
                           </div>
@@ -1947,18 +2150,6 @@ function MapPageContent() {
       <div className="flex-1 relative">
         <div ref={mapRef} className="w-full h-full" />
 
-        {/* Fixed Center Marker/Crosshair */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-full pointer-events-none z-20">
-          <Image
-            src="/mapPin.svg"
-            alt="Map Pin"
-            width={42}
-            height={66}
-            className="drop-shadow-2xl"
-            priority
-            unoptimized
-          />
-        </div>
 
         {/* Mobile Header */}
         <div className="md:hidden absolute top-0 left-0 right-0 bg-transparent">
@@ -2033,7 +2224,7 @@ function MapPageContent() {
               }}
             >
               <div className="flex items-center justify-between px-4 pt-3">
-               
+
                 <div className="flex-1 flex justify-center">
                   <div className="w-12 h-1.5 bg-gray-700 rounded-full" />
                 </div>
@@ -2041,7 +2232,7 @@ function MapPageContent() {
 
               {/* Coordinates Display */}
               <div className="px-4  text-center border-b border-gray-800 flex items-center justify-between relative h-12">
-                 <button
+                <button
                   onClick={() => {
                     setSelectedLocation(null);
                     setSelectedMarkerLocation(null);
@@ -2217,7 +2408,7 @@ function MapPageContent() {
                       {selectedMarkerLocation.photoConfidence && (
                         <div className="flex items-start gap-2">
                           <span className="text-gray-400 shrink-0">
-                          الدقة:
+                            الدقة:
                           </span>
                           <span className="text-white">
                             {selectedMarkerLocation.photoConfidence}%
@@ -2240,19 +2431,18 @@ function MapPageContent() {
                             الحالة:
                           </span>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs ${
-                              selectedMarkerLocation.status === "APPROVED"
+                            className={`px-2 py-1 rounded-full text-xs ${selectedMarkerLocation.status === "APPROVED"
                                 ? "bg-green-500/20 text-green-400"
                                 : selectedMarkerLocation.status === "REJECTED"
-                                ? "bg-red-500/20 text-red-400"
-                                : "bg-yellow-500/20 text-yellow-400"
-                            }`}
+                                  ? "bg-red-500/20 text-red-400"
+                                  : "bg-yellow-500/20 text-yellow-400"
+                              }`}
                           >
                             {selectedMarkerLocation.status === "APPROVED"
                               ? "موافق عليه"
                               : selectedMarkerLocation.status === "REJECTED"
-                              ? "مرفوض"
-                              : "قيد المراجعة"}
+                                ? "مرفوض"
+                                : "قيد المراجعة"}
                           </span>
                         </div>
                       )}
@@ -2299,13 +2489,13 @@ function MapPageContent() {
                           <span className="text-white text-md">
                             {new Date(
                               selectedMarkerLocation.createdAt
-                            ).toLocaleString("ar-SY").replaceAll('/','-')}
+                            ).toLocaleString("ar-SY").replaceAll('/', '-')}
                           </span>
                         </div>
                       )}
                       {selectedMarkerLocation.updatedAt &&
                         selectedMarkerLocation.updatedAt !==
-                          selectedMarkerLocation.createdAt && (
+                        selectedMarkerLocation.createdAt && (
                           <div className="flex items-start gap-2">
                             <span className="text-gray-400 shrink-0">
                               آخر تحديث:
@@ -2313,7 +2503,7 @@ function MapPageContent() {
                             <span className="text-white text-md">
                               {new Date(
                                 selectedMarkerLocation.updatedAt
-                              ).toLocaleString("ar-SY").replaceAll('/','-')}
+                              ).toLocaleString("ar-SY").replaceAll('/', '-')}
                             </span>
                           </div>
                         )}
@@ -2385,14 +2575,14 @@ function MapPageContent() {
                               );
                               setPhotoConfidence(
                                 (locationToEdit.photoConfidence || "100") as
-                                  | "100"
-                                  | "90"
+                                | "100"
+                                | "90"
                               );
                               setNotes(locationToEdit.notes || "");
                               setPointType(
                                 (locationToEdit.pointType || "edit") as
-                                  | "new"
-                                  | "edit"
+                                | "new"
+                                | "edit"
                               );
 
                               if (map) {
@@ -2488,19 +2678,18 @@ function MapPageContent() {
                                 {location.name || "موقع"}
                               </h4>
                               <span
-                                className={`px-2 py-0.5 rounded-full text-xs shrink-0 mr-2 ${
-                                  location.status === "APPROVED"
+                                className={`px-2 py-0.5 rounded-full text-xs shrink-0 mr-2 ${location.status === "APPROVED"
                                     ? "bg-green-500/20 text-green-400"
                                     : location.status === "REJECTED"
-                                    ? "bg-red-500/20 text-red-400"
-                                    : "bg-yellow-500/20 text-yellow-400"
-                                }`}
+                                      ? "bg-red-500/20 text-red-400"
+                                      : "bg-yellow-500/20 text-yellow-400"
+                                  }`}
                               >
                                 {location.status === "APPROVED"
                                   ? "موافق"
                                   : location.status === "REJECTED"
-                                  ? "مرفوض"
-                                  : "انتظار"}
+                                    ? "مرفوض"
+                                    : "انتظار"}
                               </span>
                             </div>
                             <div className="space-y-1 text-xs">
