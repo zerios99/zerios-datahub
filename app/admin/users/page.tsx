@@ -301,7 +301,7 @@ export default function AdminUsersPage() {
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-700 dark:border-gray-800 space-y-3">
-          <button
+          {/* <button
             onClick={() => setIsDark(!isDark)}
             className="w-full flex items-center justify-center px-4 py-2 text-gray-300 dark:text-gray-400 hover:text-white hover:bg-gray-700/50 dark:hover:bg-gray-800/50 rounded-lg transition-all duration-200"
           >
@@ -320,7 +320,7 @@ export default function AdminUsersPage() {
                 Dark Mode
               </>
             )}
-          </button>
+          </button> */}
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center px-4 py-2 text-gray-300 dark:text-gray-400 hover:text-white hover:bg-gray-700/50 dark:hover:bg-gray-800/50 rounded-lg transition-all duration-200"
