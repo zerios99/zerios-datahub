@@ -531,8 +531,8 @@ useEffect(() => {
         class SmoothCenterPin extends window.google.maps.OverlayView {
           private container: HTMLDivElement | null = null;
           private pin: HTMLImageElement | null = null;
-          private isDragging = false;
-          private isZooming = false;
+          public isDragging = false;
+          public isZooming = false;
           private zoomTimeout: NodeJS.Timeout | null = null;
 
           onAdd() {
