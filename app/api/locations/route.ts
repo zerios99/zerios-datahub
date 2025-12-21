@@ -14,7 +14,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, city, latitude, longitude, category, isSponsored, images } = body;
+    const { 
+      name, 
+      formalPlaceName,
+      city, 
+      street,
+      side,
+      path,
+      dir,
+      line,
+      latitude, 
+      longitude, 
+      category, 
+      belongsToRoute,
+      photoConfidence,
+      notes,
+      pointType,
+      isSponsored, 
+      images 
+    } = body;
 
     // Validate required fields
     if (!name || !city || latitude === undefined || longitude === undefined || !category) {
@@ -28,10 +46,20 @@ export async function POST(request: NextRequest) {
     const location = await prisma.location.create({
       data: {
         name,
+        formalPlaceName: formalPlaceName || '',
         city,
+        street: street || '',
+        side: side || '',
+        path: path || '',
+        dir: dir || '',
+        line: line || '',
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         category,
+        belongsToRoute: belongsToRoute || '',
+        photoConfidence: photoConfidence || '100',
+        notes: notes || '',
+        pointType: pointType || 'new',
         isSponsored: isSponsored || false,
         images: JSON.stringify(images || []),
         userId: session.userId,

@@ -69,14 +69,46 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { name, city, category, isSponsored, status } = body;
+    const { 
+      name, 
+      formalPlaceName,
+      city, 
+      street,
+      side,
+      path,
+      dir,
+      line,
+      latitude,
+      longitude,
+      category, 
+      belongsToRoute,
+      photoConfidence,
+      notes,
+      pointType,
+      isSponsored, 
+      status,
+      images
+    } = body;
 
-    const updateData: Record<string, string | boolean> = {};
+    const updateData: Record<string, string | boolean | number> = {};
     if (name !== undefined) updateData.name = name;
+    if (formalPlaceName !== undefined) updateData.formalPlaceName = formalPlaceName;
     if (city !== undefined) updateData.city = city;
+    if (street !== undefined) updateData.street = street;
+    if (side !== undefined) updateData.side = side;
+    if (path !== undefined) updateData.path = path;
+    if (dir !== undefined) updateData.dir = dir;
+    if (line !== undefined) updateData.line = line;
+    if (latitude !== undefined) updateData.latitude = latitude;
+    if (longitude !== undefined) updateData.longitude = longitude;
     if (category !== undefined) updateData.category = category;
+    if (belongsToRoute !== undefined) updateData.belongsToRoute = belongsToRoute;
+    if (photoConfidence !== undefined) updateData.photoConfidence = photoConfidence;
+    if (notes !== undefined) updateData.notes = notes;
+    if (pointType !== undefined) updateData.pointType = pointType;
     if (isSponsored !== undefined) updateData.isSponsored = isSponsored;
     if (status !== undefined) updateData.status = status;
+    if (images !== undefined) updateData.images = JSON.stringify(images);
 
     const location = await prisma.location.update({
       where: { id },

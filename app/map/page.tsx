@@ -939,9 +939,9 @@ useEffect(() => {
   const formContent = showForm ? (
     <form onSubmit={handleSubmit} className="space-y-8 text-base" dir="rtl">
       <div className="flex items-center justify-between mt-4 mb-3">
-        <h2 className="text-xl font-bold text-white text-center flex-1">
+        {/* <h2 className="text-xl font-bold text-white text-center flex-1">
           {isEditMode ? "تعديل الموقع" : "اضافة موقع جديد"}
-        </h2>
+        </h2> */}
         {isEditMode && (
           <button
             type="button"
@@ -991,6 +991,42 @@ useEffect(() => {
           </p>
         </div>
       )}
+
+      {/* Google Maps Button - Only show when adding new location (not viewing existing) */}
+      {!isEditMode && !selectedMarkerLocation && selectedLocation && (
+        <button
+          type="button"
+          onClick={() => {
+            window.open(
+              `https://www.google.com/maps?q=${selectedLocation.lat},${selectedLocation.lng}`,
+              '_blank'
+            );
+          }}
+          className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+          فتح في خرائط جوجل
+        </button>
+      )}
+       
 
       {/* 1. City - المدينة */}
       <div>
@@ -1786,6 +1822,16 @@ useEffect(() => {
                       </span>
                       <span className="text-white">
                         {selectedMarkerLocation.photoConfidence}%
+                      </span>
+                    </div>
+                  )}
+                  {selectedMarkerLocation.pointType && (
+                    <div className="flex items-start gap-2">
+                      <span className="text-gray-400 shrink-0">
+                        نوع النقطة:
+                      </span>
+                      <span className="text-white">
+                        {selectedMarkerLocation.pointType === "new" ? "جديد" : "تعديل"}
                       </span>
                     </div>
                   )}
