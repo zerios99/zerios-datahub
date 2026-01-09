@@ -7,17 +7,24 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
 const config = defineConfig({
+  server: {
+    port: 3000,
+  },
   plugins: [
-    devtools(),
-    nitro(),
     // this is the plugin that enables path aliases
     viteTsConfigPaths({
       projects: ['./tsconfig.json'],
     }),
-    tailwindcss(),
     tanstackStart(),
+    nitro(),
+    tailwindcss(),
+    devtools(),
+    // react's vite plugin must come after start's vite plugin
     viteReact(),
   ],
+  // Nitro config is required so the Nitro Vite plugin can register
+  // the "nitro" environment used for SSR/dev
+  nitro: {},
 })
 
 export default config
