@@ -9,14 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteRouteImport } from './routes/auth/route'
+import { Route as AuthRouteRouteImport } from './routes/_auth/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthSignupIndexRouteImport } from './routes/auth/signup/index'
-import { Route as AuthLoginIndexRouteImport } from './routes/auth/login/index'
+import { Route as AuthSignupIndexRouteImport } from './routes/_auth/signup/index'
+import { Route as AuthLoginIndexRouteImport } from './routes/_auth/login/index'
 
 const AuthRouteRoute = AuthRouteRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+  id: '/_auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,29 +36,27 @@ const AuthLoginIndexRoute = AuthLoginIndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteRouteWithChildren
-  '/auth/login': typeof AuthLoginIndexRoute
-  '/auth/signup': typeof AuthSignupIndexRoute
+  '/login': typeof AuthLoginIndexRoute
+  '/signup': typeof AuthSignupIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteRouteWithChildren
-  '/auth/login': typeof AuthLoginIndexRoute
-  '/auth/signup': typeof AuthSignupIndexRoute
+  '/login': typeof AuthLoginIndexRoute
+  '/signup': typeof AuthSignupIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/auth': typeof AuthRouteRouteWithChildren
-  '/auth/login/': typeof AuthLoginIndexRoute
-  '/auth/signup/': typeof AuthSignupIndexRoute
+  '/_auth': typeof AuthRouteRouteWithChildren
+  '/_auth/login/': typeof AuthLoginIndexRoute
+  '/_auth/signup/': typeof AuthSignupIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/auth/login' | '/auth/signup'
+  fullPaths: '/' | '/login' | '/signup'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/auth/login' | '/auth/signup'
-  id: '__root__' | '/' | '/auth' | '/auth/login/' | '/auth/signup/'
+  to: '/' | '/login' | '/signup'
+  id: '__root__' | '/' | '/_auth' | '/_auth/login/' | '/_auth/signup/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -69,10 +66,10 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: ''
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -83,17 +80,17 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/signup/': {
-      id: '/auth/signup/'
+    '/_auth/signup/': {
+      id: '/_auth/signup/'
       path: '/signup'
-      fullPath: '/auth/signup'
+      fullPath: '/signup'
       preLoaderRoute: typeof AuthSignupIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
-    '/auth/login/': {
-      id: '/auth/login/'
+    '/_auth/login/': {
+      id: '/_auth/login/'
       path: '/login'
-      fullPath: '/auth/login'
+      fullPath: '/login'
       preLoaderRoute: typeof AuthLoginIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }

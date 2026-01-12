@@ -2,7 +2,7 @@ import { buttonVariants } from '@/components/ui/button'
 import { createFileRoute, Link, Outlet } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
 
-export const Route = createFileRoute('/auth')({
+export const Route = createFileRoute('/_auth')({
   component: RouteComponent,
 })
 
