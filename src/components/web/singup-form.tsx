@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Link } from '@tanstack/react-router'
 import { useForm } from '@tanstack/react-form'
 import { signupSchema } from '@/schemas/auth'
+import { authClient } from '@/lib/auth-client'
 
 export function SignupForm() {
   const form = useForm({
@@ -29,7 +30,12 @@ export function SignupForm() {
       onSubmit: signupSchema,
     },
     onSubmit: async ({ value }) => {
-      console.log('Form Submitted:', value)
+      await authClient.signUp.email({
+        name: value.name,
+        email: value.email,
+        password: value.password,
+        callbackURL: '/dashboard',
+      })
     },
   })
 
