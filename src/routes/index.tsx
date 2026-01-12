@@ -1,12 +1,14 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
+import { ComponentExample } from '@/components/component-example'
+import { Navbar } from '@/components/web/navbar'
 
 export const Route = createFileRoute('/')({ component: App })
 
 function App() {
   return (
-    <>
-      <div>hello</div>
-      <Link to="/about">About</Link>
-    </>
+    <div>
+      <Navbar />
+      <ComponentExample />
+    </div>
   )
 }
