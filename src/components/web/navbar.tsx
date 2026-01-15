@@ -39,7 +39,10 @@ export function Navbar() {
               <Button onClick={handelSingOut} variant={'secondary'}>
                 Logout
               </Button>
-              <Link to="/" className={buttonVariants({ variant: 'default' })}>
+              <Link
+                to="/dashboard"
+                className={buttonVariants({ variant: 'default' })}
+              >
                 Dashboard
               </Link>
             </>

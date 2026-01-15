@@ -3,28 +3,34 @@
 import * as React from 'react'
 import {
   AudioWaveform,
+  BookmarkIcon,
   BookOpen,
   Bot,
   Command,
+  CompassIcon,
   Frame,
   GalleryVerticalEnd,
+  ImportIcon,
   Map,
   PieChart,
   Settings2,
   SquareTerminal,
 } from 'lucide-react'
 
-import { NavMain } from '@/components/web/nav-main'
-import { NavProjects } from '@/components/web/nav-projects'
+import { NavPrimary } from '@/components/web/nav-primary'
 import { NavUser } from '@/components/web/nav-user'
-import { TeamSwitcher } from '@/components/web/team-switcher'
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
 } from '@/components/ui/sidebar'
+import { Link } from '@tanstack/react-router'
+import { NavPrimaryProps } from '@/lib/types'
 
 // This is sample data.
 const data = {
@@ -156,15 +162,46 @@ const data = {
   ],
 }
 
+const navItems: NavPrimaryProps['items'] = [
+  {
+    title: 'items',
+    icon: BookmarkIcon,
+    to: '/dashboard/items',
+  },
+  {
+    title: 'Import',
+    icon: ImportIcon,
+    to: '/dashboard/import',
+  },
+  {
+    title: 'Discover',
+    icon: CompassIcon,
+    to: '/dashboard/discover',
+  },
+]
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size={'lg'} asChild>
+              <Link to="/dashboard" className="flex items-center gap-3">
+                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+                  <BookmarkIcon className="size-4" />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="font-medium">zerios-dh</span>
+                  <span className="text-xs">Your AI Knowledge Base</span>
+                </div>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavPrimary items={navItems} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
