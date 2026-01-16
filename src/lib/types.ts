@@ -1,3 +1,4 @@
+import { type User } from 'better-auth'
 import { LucideIcon } from 'lucide-react'
 
 export interface NavPrimaryProps {
@@ -7,4 +8,8 @@ export interface NavPrimaryProps {
     icon: LucideIcon
     activeOptions: { exact: boolean }
   }[]
+}
+
+export interface NavUserProps {
+  user: User
 }

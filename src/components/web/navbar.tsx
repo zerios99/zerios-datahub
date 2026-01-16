@@ -29,7 +29,7 @@ export function Navbar() {
             alt="tanstack logo"
             className="size-9"
           />
-          <h1 className="text-lg font-semibold">Tanstack Start</h1>
+          <h1 className="text-lg font-semibold">Zerios Data-hub</h1>
         </div>
 
         <div className="flex items-center gap-3">
