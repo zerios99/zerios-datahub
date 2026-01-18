@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { bulkImportSchema, importSchema } from '@/schemas/import'
 import { createFileRoute } from '@tanstack/react-router'
 import { Globe, LinkIcon, Loader } from 'lucide-react'
-import { useForm } from '@tanstack/react-form' // ✅ تم إصلاح المسار
+import { useForm } from '@tanstack/react-form'
 import { useTransition } from 'react'
 
 export const Route = createFileRoute('/dashboard/import/')({
@@ -65,7 +65,6 @@ function RouteComponent() {
           <h1 className="text-3xl font-bold">Import Content</h1>
           <p className="text-muted-foreground pt-1">
             Save web pages to your library for later reading{' '}
-            {/* ✅ تم إصلاح الإملاء */}
           </p>
         </div>
 
