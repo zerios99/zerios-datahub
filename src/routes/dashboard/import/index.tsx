@@ -19,6 +19,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Globe, LinkIcon, Loader } from 'lucide-react'
 import { useForm } from '@tanstack/react-form'
 import { useTransition } from 'react'
+import { scrapeUrlFn } from '@/data/items'
 
 export const Route = createFileRoute('/dashboard/import/')({
   component: RouteComponent,
@@ -38,6 +39,7 @@ function RouteComponent() {
     onSubmit: ({ value }) => {
       startTransition(async () => {
         console.log(value)
+        await scrapeUrlFn({ data: value })
       })
     },
   })
