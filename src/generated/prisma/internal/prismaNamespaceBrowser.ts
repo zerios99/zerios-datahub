@@ -51,12 +51,11 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-  Todo: 'Todo',
   User: 'User',
   Session: 'Session',
   Account: 'Account',
   Verification: 'Verification',
-  SavedItems: 'SavedItems'
+  SavedItem: 'SavedItem'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -73,15 +72,6 @@ export const TransactionIsolationLevel = {
 } as const
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
-
-
-export const TodoScalarFieldEnum = {
-  id: 'id',
-  title: 'title',
-  createdAt: 'createdAt'
-} as const
-
-export type TodoScalarFieldEnum = (typeof TodoScalarFieldEnum)[keyof typeof TodoScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
@@ -142,7 +132,7 @@ export const VerificationScalarFieldEnum = {
 export type VerificationScalarFieldEnum = (typeof VerificationScalarFieldEnum)[keyof typeof VerificationScalarFieldEnum]
 
 
-export const SavedItemsScalarFieldEnum = {
+export const SavedItemScalarFieldEnum = {
   id: 'id',
   url: 'url',
   title: 'title',
@@ -158,7 +148,7 @@ export const SavedItemsScalarFieldEnum = {
   userId: 'userId'
 } as const
 
-export type SavedItemsScalarFieldEnum = (typeof SavedItemsScalarFieldEnum)[keyof typeof SavedItemsScalarFieldEnum]
+export type SavedItemScalarFieldEnum = (typeof SavedItemScalarFieldEnum)[keyof typeof SavedItemScalarFieldEnum]
 
 
 export const SortOrder = {

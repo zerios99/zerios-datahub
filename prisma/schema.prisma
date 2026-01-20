@@ -7,23 +7,17 @@ datasource db {
   provider = "postgresql"
 }
 
-model Todo {
-  id        Int      @id @default(autoincrement())
-  title     String
-  createdAt DateTime @default(now())
-}
-
 model User {
-  id            String       @id
+  id            String      @id
   name          String
   email         String
-  emailVerified Boolean      @default(false)
+  emailVerified Boolean     @default(false)
   image         String?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   sessions      Session[]
   accounts      Account[]
-  savedItems    SavedItems[]
+  savedItems    SavedItem[]
 
   @@unique([email])
   @@map("user")
@@ -77,7 +71,7 @@ model Verification {
   @@map("verification")
 }
 
-model SavedItems {
+model SavedItem {
   id          String     @id @default(uuid())
   url         String
   title       String?
