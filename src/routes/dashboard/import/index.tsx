@@ -18,8 +18,11 @@ import { bulkImportSchema, importSchema } from '@/schemas/import'
 import { createFileRoute } from '@tanstack/react-router'
 import { Globe, LinkIcon, Loader } from 'lucide-react'
 import { useForm } from '@tanstack/react-form'
-import { useTransition } from 'react'
-import { scrapeUrlFn } from '@/data/items'
+import { useState, useTransition } from 'react'
+import { mapUrlFn, scrapeUrlFn } from '@/data/items'
+import { toast } from 'sonner'
+import { type SearchResultWeb } from '@mendable/firecrawl-js'
+import { Checkbox } from '@/components/ui/checkbox'
 
 export const Route = createFileRoute('/dashboard/import/')({
   component: RouteComponent,
@@ -27,6 +30,10 @@ export const Route = createFileRoute('/dashboard/import/')({
 
 function RouteComponent() {
   const [isPending, startTransition] = useTransition()
+
+  const [discoveredLinks, setDiscoveredLinks] = useState<
+    Array<SearchResultWeb>
+  >([])
 
   const form = useForm({
     defaultValues: {
@@ -40,6 +47,7 @@ function RouteComponent() {
       startTransition(async () => {
         console.log(value)
         await scrapeUrlFn({ data: value })
+        toast.success('URL imported successfully!')
       })
     },
   })
@@ -56,6 +64,9 @@ function RouteComponent() {
     onSubmit: ({ value }) => {
       startTransition(async () => {
         console.log(value)
+        const data = await mapUrlFn({ data: value })
+
+        setDiscoveredLinks(data)
       })
     },
   })
@@ -234,6 +245,34 @@ function RouteComponent() {
                     </Button>
                   </FieldGroup>
                 </form>
+
+                {/* Discovered Links */}
+                {discoveredLinks.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">
+                        Found {discoveredLinks.length} links
+                      </p>
+                      <Button variant={'outline'} size={'sm'}>
+                        Select All
+                      </Button>
+                    </div>
+
+                    <div className="max-h-80 space-y-2 overflow-y-auto rounded-md border p-4">
+                      {discoveredLinks.map((link) => (
+                        <label
+                          key={link.url}
+                          className="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-md p-2"
+                        >
+                          <Checkbox className="mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate">{link.title}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
