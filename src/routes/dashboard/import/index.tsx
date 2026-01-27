@@ -16,10 +16,10 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { bulkImportSchema, importSchema } from '@/schemas/import'
 import { createFileRoute } from '@tanstack/react-router'
-import { Globe, LinkIcon, Loader } from 'lucide-react'
+import { Globe, LinkIcon, Loader, Loader2 } from 'lucide-react'
 import { useForm } from '@tanstack/react-form'
 import { useState, useTransition } from 'react'
-import { mapUrlFn, scrapeUrlFn } from '@/data/items'
+import { bulkScrapeUrlsFn, mapUrlFn, scrapeUrlFn } from '@/data/items'
 import { toast } from 'sonner'
 import { type SearchResultWeb } from '@mendable/firecrawl-js'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -30,6 +30,7 @@ export const Route = createFileRoute('/dashboard/import/')({
 
 function RouteComponent() {
   const [isPending, startTransition] = useTransition()
+  const [bulkIsPending, startBulkTransition] = useTransition()
 
   const [selectedUrl, setSelectedUrl] = useState<Set<string>>(new Set())
 
@@ -56,6 +57,21 @@ function RouteComponent() {
   const [discoveredLinks, setDiscoveredLinks] = useState<
     Array<SearchResultWeb>
   >([])
+
+  function handleBulkImport() {
+    startBulkTransition(async () => {
+      if (selectedUrl.size === 0) {
+        toast.error('Please select at least one URL to import')
+        return
+      }
+
+      await bulkScrapeUrlsFn({
+        data: { urls: Array.from(selectedUrl) },
+      })
+
+      toast.success(`Imported ${selectedUrl.size} URLs successfully!`)
+    })
+  }
 
   const form = useForm({
     defaultValues: {
@@ -312,7 +328,21 @@ function RouteComponent() {
                       ))}
                     </div>
 
-                    <Button className="w-full">Import Selected</Button>
+                    <Button
+                      disabled={bulkIsPending}
+                      onClick={handleBulkImport}
+                      className="w-full"
+                      type="button"
+                    >
+                      {bulkIsPending ? (
+                        <>
+                          <Loader2 className="size-4 animate-spin" />
+                          Importing...
+                        </>
+                      ) : (
+                        `Import ${selectedUrl.size} URLs`
+                      )}
+                    </Button>
                   </div>
                 )}
               </CardContent>

@@ -71,3 +71,70 @@ export const mapUrlFn = createServerFn({ method: 'POST' })
 
     return result.links
   })
+
+export const bulkScrapeUrlsFn = createServerFn({ method: 'POST' })
+  .middleware([authMiddleware])
+  .inputValidator(
+    z.object({
+      urls: z.array(z.string().url()),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const results = []
+
+    for (let i = 0; i < data.urls.length; i++) {
+      const url = data.urls[i]
+
+      const item = await prisma.savedItem.create({
+        data: {
+          url: url,
+          userId: context!.session.user.id,
+          status: 'PENDING',
+        },
+      })
+
+      try {
+        const result = await firecrawl.scrape(url, {
+          formats: ['markdown', { type: 'json', schema: extractSchema }],
+          location: {
+            country: 'US',
+            languages: ['en'],
+          },
+          onlyMainContent: true,
+        })
+
+        const jsonData = result.json as z.infer<typeof extractSchema>
+
+        let publishedAt: Date | null = null
+        if (jsonData.publishedAt) {
+          const parsed = new Date(jsonData.publishedAt)
+          if (!isNaN(parsed.getTime())) {
+            publishedAt = parsed
+          }
+        }
+
+        const updatedItem = await prisma.savedItem.update({
+          where: { id: item.id },
+          data: {
+            title: result.metadata?.title || null,
+            content: result.markdown || null,
+            ogImage: result.metadata?.ogImage || null,
+            author: jsonData.authors || null,
+            publishedAt,
+            status: 'COMPLETED',
+          },
+        })
+
+        results.push(updatedItem)
+      } catch {
+        const failedItem = await prisma.savedItem.update({
+          where: { id: item.id },
+          data: { status: 'FAILED' },
+        })
+
+        results.push(failedItem)
+      }
+    }
+
+    return results
+  })
