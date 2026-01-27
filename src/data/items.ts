@@ -71,4 +71,3 @@ export const mapUrlFn = createServerFn({ method: 'POST' })
 
     return result.links
   })
-0

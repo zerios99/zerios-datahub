@@ -31,6 +31,28 @@ export const Route = createFileRoute('/dashboard/import/')({
 function RouteComponent() {
   const [isPending, startTransition] = useTransition()
 
+  const [selectedUrl, setSelectedUrl] = useState<Set<string>>(new Set())
+
+  function handelSelectAll() {
+    if (selectedUrl.size === discoveredLinks.length) {
+      setSelectedUrl(new Set())
+    } else {
+      setSelectedUrl(new Set(discoveredLinks.map((link) => link.url)))
+    }
+  }
+
+  function handleToggleUrl(url: string) {
+    const newSelectedUrl = new Set(selectedUrl)
+
+    if (newSelectedUrl.has(url)) {
+      newSelectedUrl.delete(url)
+    } else {
+      newSelectedUrl.add(url)
+    }
+
+    setSelectedUrl(newSelectedUrl)
+  }
+
   const [discoveredLinks, setDiscoveredLinks] = useState<
     Array<SearchResultWeb>
   >([])
@@ -163,7 +185,7 @@ function RouteComponent() {
                 </CardDescription>
               </CardHeader>
 
-              <CardContent>
+              <CardContent className="space-y-6">
                 <form
                   onSubmit={(e) => {
                     e.preventDefault()
@@ -253,8 +275,14 @@ function RouteComponent() {
                       <p className="text-sm font-medium">
                         Found {discoveredLinks.length} links
                       </p>
-                      <Button variant={'outline'} size={'sm'}>
-                        Select All
+                      <Button
+                        onClick={handelSelectAll}
+                        variant={'outline'}
+                        size={'sm'}
+                      >
+                        {selectedUrl.size === discoveredLinks.length
+                          ? 'Deselect All'
+                          : 'Select All'}
                       </Button>
                     </div>
 
@@ -264,13 +292,27 @@ function RouteComponent() {
                           key={link.url}
                           className="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-md p-2"
                         >
-                          <Checkbox className="mt-0.5" />
+                          <Checkbox
+                            checked={selectedUrl.has(link.url)}
+                            onCheckedChange={() => handleToggleUrl(link.url)}
+                            className="mt-0.5"
+                          />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate">{link.title}</p>
+                            <p className="truncate text-sm font-medium">
+                              {link.title ?? 'Title not available'}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {link.description ?? 'No description available'}
+                            </p>
+                            <p className="text-muted-foreground truncate text-xs">
+                              {link.url}
+                            </p>
                           </div>
                         </label>
                       ))}
                     </div>
+
+                    <Button className="w-full">Import Selected</Button>
                   </div>
                 )}
               </CardContent>
