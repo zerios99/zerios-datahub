@@ -1,8 +1,11 @@
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { getItemsFn } from '@/data/items'
+import { copyToClipboard } from '@/lib/clipboard'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Copy } from 'lucide-react'
+import { toast } from 'sonner'
 
 export const Route = createFileRoute('/dashboard/items/')({
   component: RouteComponent,
@@ -34,11 +37,33 @@ function RouteComponent() {
 
             <CardHeader className="space-y-3 pt-4">
               <div className="flex items-center justify-between gap-2">
-                <span>{item.status.toLocaleLowerCase()}</span>
-                <Button variant={'outline'} size={'icon'} className="size-8">
+                <Badge
+                  variant={
+                    item.status === 'COMPLETED' ? 'default' : 'secondary'
+                  }
+                >
+                  {item.status.toLocaleLowerCase()}
+                </Badge>
+                <Button
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    await copyToClipboard(item.url)
+                    toast.success('Copied to clipboard!')
+                  }}
+                  variant={'outline'}
+                  size={'icon'}
+                  className="size-8"
+                >
                   <Copy className="size-4" />
                 </Button>
               </div>
+
+              <CardTitle className="line-clamp-2 text-xl leading-snug group-hover:text-primary transition-colors">
+                {item.title ?? 'No Title'}
+              </CardTitle>
+              {item.author && (
+                <p className="text-xs text-muted-foreground">{item.author}</p>
+              )}
             </CardHeader>
           </Link>
         </Card>
