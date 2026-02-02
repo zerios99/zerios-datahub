@@ -5,7 +5,6 @@ import { getItemsFn } from '@/data/items'
 import { copyToClipboard } from '@/lib/clipboard'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Copy } from 'lucide-react'
-import { toast } from 'sonner'
 
 export const Route = createFileRoute('/dashboard/items/')({
   component: RouteComponent,
@@ -48,7 +47,6 @@ function RouteComponent() {
                   onClick={async (e) => {
                     e.preventDefault()
                     await copyToClipboard(item.url)
-                    toast.success('Copied to clipboard!')
                   }}
                   variant={'outline'}
                   size={'icon'}
