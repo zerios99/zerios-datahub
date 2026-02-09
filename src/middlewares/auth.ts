@@ -1,15 +1,17 @@
-import { auth } from '@/lib/auth'
 import { createMiddleware } from '@tanstack/react-start'
-import { getRequestHeaders } from '@tanstack/react-start/server'
-import { redirect } from '@tanstack/react-router'
 
-const PUBLIC_ROUTES = ['/login', '/register']
+import { getRequestHeaders } from '@tanstack/react-start/server'
+
+import { redirect } from '@tanstack/react-router'
+import { auth } from '@/lib/auth'
+const PUBLIC_ROUTES = ['/login', '/register', '/api']
 
 export const authMiddleware = createMiddleware({ type: 'request' }).server(
   async ({ next, request }) => {
     const url = new URL(request.url)
 
-    if (PUBLIC_ROUTES.includes(url.pathname)) {
+    // Skip middleware for public routes and API routes
+    if (PUBLIC_ROUTES.some((route) => url.pathname.startsWith(route))) {
       return next()
     }
 

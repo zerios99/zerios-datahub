@@ -75,11 +75,11 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/login': typeof AuthLoginIndexRoute
-  '/signup': typeof AuthSignupIndexRoute
-  '/dashboard/discover': typeof DashboardDiscoverIndexRoute
-  '/dashboard/import': typeof DashboardImportIndexRoute
-  '/dashboard/items': typeof DashboardItemsIndexRoute
+  '/login/': typeof AuthLoginIndexRoute
+  '/signup/': typeof AuthSignupIndexRoute
+  '/dashboard/discover/': typeof DashboardDiscoverIndexRoute
+  '/dashboard/import/': typeof DashboardImportIndexRoute
+  '/dashboard/items/': typeof DashboardItemsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -111,11 +111,11 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/dashboard/'
     | '/api/auth/$'
-    | '/login'
-    | '/signup'
-    | '/dashboard/discover'
-    | '/dashboard/import'
-    | '/dashboard/items'
+    | '/login/'
+    | '/signup/'
+    | '/dashboard/discover/'
+    | '/dashboard/import/'
+    | '/dashboard/items/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -159,7 +159,7 @@ declare module '@tanstack/react-router' {
     '/_auth': {
       id: '/_auth'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -180,35 +180,35 @@ declare module '@tanstack/react-router' {
     '/dashboard/items/': {
       id: '/dashboard/items/'
       path: '/items'
-      fullPath: '/dashboard/items'
+      fullPath: '/dashboard/items/'
       preLoaderRoute: typeof DashboardItemsIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
     '/dashboard/import/': {
       id: '/dashboard/import/'
       path: '/import'
-      fullPath: '/dashboard/import'
+      fullPath: '/dashboard/import/'
       preLoaderRoute: typeof DashboardImportIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
     '/dashboard/discover/': {
       id: '/dashboard/discover/'
       path: '/discover'
-      fullPath: '/dashboard/discover'
+      fullPath: '/dashboard/discover/'
       preLoaderRoute: typeof DashboardDiscoverIndexRouteImport
       parentRoute: typeof DashboardRouteRoute
     }
     '/_auth/signup/': {
       id: '/_auth/signup/'
       path: '/signup'
-      fullPath: '/signup'
+      fullPath: '/signup/'
       preLoaderRoute: typeof AuthSignupIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/_auth/login/': {
       id: '/_auth/login/'
       path: '/login'
-      fullPath: '/login'
+      fullPath: '/login/'
       preLoaderRoute: typeof AuthLoginIndexRouteImport
       parentRoute: typeof AuthRouteRoute
     }

@@ -10,14 +10,22 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getItemsFn } from '@/data/items'
-import { ItemStatus } from '@/generated/prisma/enums'
+import { ItemStatus } from '@prisma/client'
 import { copyToClipboard } from '@/lib/clipboard'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Copy } from 'lucide-react'
+import z from 'zod'
+import { zodValidator } from '@tanstack/zod-adapter'
+
+const itemsSearchSchema = z.object({
+  q: z.string().default(''),
+  status: z.union([z.literal('all'), z.nativeEnum(ItemStatus)]).default('all'),
+})
 
 export const Route = createFileRoute('/dashboard/items/')({
   component: RouteComponent,
   loader: () => getItemsFn(),
+  validateSearch: zodValidator(itemsSearchSchema),
 })
 
 function RouteComponent() {
