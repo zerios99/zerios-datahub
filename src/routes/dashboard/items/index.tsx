@@ -16,6 +16,8 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { Copy } from 'lucide-react'
 import z from 'zod'
 import { zodValidator } from '@tanstack/zod-adapter'
+import { useEffect, useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 
 const itemsSearchSchema = z.object({
   q: z.string().default(''),
@@ -31,6 +33,18 @@ export const Route = createFileRoute('/dashboard/items/')({
 function RouteComponent() {
   const data = Route.useLoaderData()
 
+  const { status, q } = Route.useSearch()
+  const [searchInput, setSearchInput] = useState(q)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (searchInput === q) return
+
+    const timeOutId = setTimeout(() => {
+      navigate({ search: (prev) => ({ ...prev, q: searchInput }) })
+    }, 300)
+  })
+
   return (
     <div className="flex flex-1 flex-col gap-6">
       <div className="">
@@ -40,7 +54,11 @@ function RouteComponent() {
 
       {/* search and filter controls */}
       <div className="flex gap-4">
-        <Input placeholder="search by title or tags" />
+        <Input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="search by title or tags"
+        />
         <Select>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Filter by status" />
