@@ -35,7 +35,7 @@ function RouteComponent() {
 
   const { status, q } = Route.useSearch()
   const [searchInput, setSearchInput] = useState(q)
-  const navigate = useNavigate()
+  const navigate = useNavigate({ from: Route.fullpath })
 
   useEffect(() => {
     if (searchInput === q) return
