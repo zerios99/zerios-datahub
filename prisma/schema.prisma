@@ -7,30 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Location {
-  id              String   @id @default(cuid())
-  name            String
-  city            String
-  latitude        Float
-  longitude       Float
-  category        String
-  isSponsored     Boolean  @default(false)
-  images          String   @default("[]")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  status          String   @default("PENDING")
-  userId          String
-  belongsToRoute  String?
-  formalPlaceName String?
-  notes           String?
-  photoConfidence String   @default("100")
-  pointType       String   @default("new")
-  side            String?
-  street          String?
-  path            String?
-  dir             String?
-  line            String?
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+// Enums for type safety
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum LocationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PointType {
+  NEW
+  EDIT
 }
 
 model User {
@@ -38,10 +29,63 @@ model User {
   name      String
   email     String     @unique
   password  String
+  role      UserRole   @default(USER)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  role      String     @default("USER")
   locations Location[]
+
+  @@index([email])
+}
+
+model Location {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Location info
+  name            String  @db.VarChar(255)
+  formalPlaceName String? @db.VarChar(255)
+  category        String  @db.VarChar(100)
+  city            String  @db.VarChar(100)
+  street          String? @db.VarChar(255)
+  side            String? @db.VarChar(100)
+  path            String? @db.VarChar(255)
+  dir             String? @db.VarChar(100)
+  line            String? @db.VarChar(100)
+
+  // Coordinates
+  latitude  Float
+  longitude Float
+
+  // Metadata
+  status          LocationStatus @default(PENDING)
+  isSponsored     Boolean        @default(false)
+  pointType       PointType      @default(NEW)
+  photoConfidence Int            @default(100)
+  belongsToRoute  String?        @db.VarChar(255)
+  notes           String?        @db.Text
+
+  // Images
+  images LocationImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([city])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model LocationImage {
+  id         String   @id @default(cuid())
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  url        String   @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([locationId])
 }
 
 model City {

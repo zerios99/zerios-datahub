@@ -1,69 +1,75 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { validateLocationInput } from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getSession();
-    
+
     if (!session) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { 
-      name, 
+    const {
+      name,
       formalPlaceName,
-      city, 
+      city,
       street,
       side,
       path,
       dir,
       line,
-      latitude, 
-      longitude, 
-      category, 
+      latitude,
+      longitude,
+      category,
       belongsToRoute,
       photoConfidence,
       notes,
       pointType,
-      isSponsored, 
-      images 
+      isSponsored,
+      images,
     } = body;
 
     // Validate required fields
-    if (!name || !city || latitude === undefined || longitude === undefined || !category) {
+    const validationErrors = validateLocationInput(body);
+    if (validationErrors) {
       return NextResponse.json(
-        { error: 'name, city, latitude, longitude, and category are required' },
-        { status: 400 }
+        { error: "Validation failed", errors: validationErrors },
+        { status: 400 },
       );
     }
 
-    // Create location in database
+    // Create location in database with images
     const location = await prisma.location.create({
       data: {
         name,
-        formalPlaceName: formalPlaceName || '',
+        formalPlaceName: formalPlaceName || null,
         city,
-        street: street || '',
-        side: side || '',
-        path: path || '',
-        dir: dir || '',
-        line: line || '',
+        street: street || null,
+        side: side || null,
+        path: path || null,
+        dir: dir || null,
+        line: line || null,
         latitude: parseFloat(latitude),
         longitude: parseFloat(longitude),
         category,
-        belongsToRoute: belongsToRoute || '',
-        photoConfidence: photoConfidence || '100',
-        notes: notes || '',
-        pointType: pointType || 'new',
+        belongsToRoute: belongsToRoute || null,
+        photoConfidence: parseInt(photoConfidence) || 100,
+        notes: notes || null,
+        pointType: pointType || "NEW",
         isSponsored: isSponsored || false,
-        images: JSON.stringify(images || []),
         userId: session.userId,
-        status: 'PENDING',
+        status: "PENDING",
+        images: {
+          create: (images || []).map((url: string) => ({
+            url,
+          })),
+        },
+      },
+      include: {
+        images: true,
       },
     });
 
@@ -71,14 +77,14 @@ export async function POST(request: NextRequest) {
       success: true,
       location: {
         ...location,
-        images: JSON.parse(location.images),
+        images: location.images.map((img) => img.url),
       },
     });
   } catch (error) {
-    console.error('Error creating location:', error);
+    console.error("Error creating location:", error);
     return NextResponse.json(
-      { error: 'Failed to create location' },
-      { status: 500 }
+      { error: "Failed to create location" },
+      { status: 500 },
     );
   }
 }
@@ -86,20 +92,25 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   try {
     const locations = await prisma.location.findMany({
-      orderBy: { createdAt: 'desc' },
+      include: {
+        images: {
+          select: { url: true },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json({
       locations: locations.map((loc) => ({
         ...loc,
-        images: JSON.parse(loc.images),
+        images: loc.images.map((img) => img.url),
       })),
     });
   } catch (error) {
-    console.error('Error fetching locations:', error);
+    console.error("Error fetching locations:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch locations' },
-      { status: 500 }
+      { error: "Failed to fetch locations" },
+      { status: 500 },
     );
   }
 }
