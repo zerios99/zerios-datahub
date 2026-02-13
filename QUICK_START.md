@@ -6,6 +6,10 @@
 
 Make sure your `.env` file has these values set:
 
+
+
+
+
 ```env
 DATABASE_URL="file:./dev.db"
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY="your_actual_google_maps_key"
