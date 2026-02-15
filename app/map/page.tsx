@@ -1251,8 +1251,8 @@ function MapPageContent() {
                 type="radio"
                 name="photoConfidence"
                 value="100"
-                checked={photoConfidence === "100"}
-                onChange={() => setPhotoConfidence("100")}
+                checked={photoConfidence === 100}
+                onChange={() => setPhotoConfidence(100)}
                 className="w-4 h-4"
               />
               <span className="text-white text-sm">
@@ -1264,8 +1264,8 @@ function MapPageContent() {
                 type="radio"
                 name="photoConfidence"
                 value="90"
-                checked={photoConfidence === "90"}
-                onChange={() => setPhotoConfidence("90")}
+                checked={photoConfidence === 90}
+                onChange={() => setPhotoConfidence(90)}
                 className="w-4 h-4"
               />
               <span className="text-white text-sm">

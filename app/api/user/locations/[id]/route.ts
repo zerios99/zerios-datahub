@@ -69,20 +69,31 @@ export async function PATCH(
     if (notes !== undefined) updateData.notes = notes;
     if (pointType !== undefined) updateData.pointType = pointType;
     if (isSponsored !== undefined) updateData.isSponsored = isSponsored;
-    if (images !== undefined) updateData.images = JSON.stringify(images);
-
     // Reset status to PENDING when user updates their location
     updateData.status = "PENDING";
 
     const location = await prisma.location.update({
       where: { id },
-      data: updateData,
+      data: {
+        ...updateData,
+        ...(images !== undefined && {
+          images: {
+            deleteMany: {},
+            create: (images as string[]).map((url: string) => ({ url })),
+          },
+        }),
+      },
+      include: {
+        images: {
+          select: { url: true },
+        },
+      },
     });
 
     return NextResponse.json({
       location: {
         ...location,
-        images: JSON.parse(location.images),
+        images: location.images.map((img) => img.url),
       },
     });
   } catch (error) {
