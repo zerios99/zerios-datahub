@@ -1,22 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
 
-    if (!session || session.role !== 'ADMIN') {
-      return NextResponse.json(
-        { error: 'Not authorized' },
-        { status: 403 }
-      );
+    if (!session || session.role !== "ADMIN") {
+      return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const userId = searchParams.get('userId');
-    const id = searchParams.get('id');
+    const status = searchParams.get("status");
+    const userId = searchParams.get("userId");
+    const id = searchParams.get("id");
 
     const where: Record<string, string> = {};
     if (status) where.status = status;
@@ -33,21 +30,24 @@ export async function GET(request: NextRequest) {
             email: true,
           },
         },
+        images: {
+          select: { url: true },
+        },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json({
       locations: locations.map((loc) => ({
         ...loc,
-        images: JSON.parse(loc.images),
+        images: loc.images.map((img) => img.url),
       })),
     });
   } catch (error) {
-    console.error('Error fetching locations:', error);
+    console.error("Error fetching locations:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch locations' },
-      { status: 500 }
+      { error: "Failed to fetch locations" },
+      { status: 500 },
     );
   }
 }

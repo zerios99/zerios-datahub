@@ -79,9 +79,9 @@ function MapPageContent() {
   const categoryDropdownRef = useRef<HTMLDivElement>(null);
   const [belongsToRoute, setBelongsToRoute] = useState("");
   const [images, setImages] = useState<File[]>([]);
-  const [photoConfidence, setPhotoConfidence] = useState<"100" | "90">("100");
+  const [photoConfidence, setPhotoConfidence] = useState<number>(100);
   const [notes, setNotes] = useState("");
-  const [pointType, setPointType] = useState<"new" | "edit">("new");
+  const [pointType, setPointType] = useState<"NEW" | "EDIT">("NEW");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -218,8 +218,24 @@ function MapPageContent() {
     "مرسى قوارب": "#4CAF50",
   };
 
-  const getPinIcon = (category: string) => {
-    const color = categoryColors[category] || "#FF0000";
+  const getColorByStatus = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "#FFC107"; // أصفر - قيد المراجعة
+      case "APPROVED":
+        return "#4CAF50"; // أخضر - موافق
+      case "REJECTED":
+        return "#F44336"; // أحمر - مرفوض
+      default:
+        return "#FF0000";
+    }
+  };
+
+  const getPinIcon = (category: string, status?: string) => {
+    // إذا كان هناك status، استخدم اللون حسب status بدلاً من category
+    const color = status
+      ? getColorByStatus(status)
+      : categoryColors[category] || "#FF0000";
     const svg = `<svg width="30" height="47" viewBox="0 0 30 47" xmlns="http://www.w3.org/2000/svg">
       <path d="M15 0C6.716 0 0 6.716 0 15c0 7.5 12 27 15 32s15-24.5 15-32C30 6.716 23.284 0 15 0z" fill="${color}"/>
       <circle cx="15" cy="15" r="6" fill="white"/>
@@ -421,7 +437,7 @@ function MapPageContent() {
         position: { lat: location.latitude, lng: location.longitude },
         map: map,
         title: location.name,
-        icon: getPinIcon(location.category),
+        icon: getPinIcon(location.category, location.status),
       });
 
       marker.addListener("click", () => {
@@ -474,8 +490,8 @@ function MapPageContent() {
               setLine(location.line || "");
               setBelongsToRoute(location.belongsToRoute || "");
               setNotes(location.notes || "");
-              setPhotoConfidence(location.photoConfidence || "100");
-              setPointType((location.pointType as "new" | "edit") || "edit");
+              setPhotoConfidence(Number(location.photoConfidence) || 100);
+              setPointType((location.pointType as "NEW" | "EDIT") || "EDIT");
               setSelectedLocation({
                 lat: location.latitude,
                 lng: location.longitude,
@@ -863,12 +879,14 @@ function MapPageContent() {
         longitude: selectedLocation.lng,
         category,
         belongsToRoute,
-        photoConfidence,
+        photoConfidence: Number(photoConfidence), // ✅ FIX
         notes,
         pointType,
         isSponsored: false,
         ...(imageUrls.length > 0 && { images: imageUrls }),
       };
+
+      console.log("Submitting locationData:", locationData); // debug
 
       let response;
       if (isEditMode && editingLocationId) {
@@ -886,10 +904,7 @@ function MapPageContent() {
         response = await fetch("/api/locations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...locationData,
-            images: imageUrls,
-          }),
+          body: JSON.stringify(locationData),
         });
       }
 
