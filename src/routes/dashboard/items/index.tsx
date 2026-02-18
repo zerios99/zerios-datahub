@@ -1,3 +1,9 @@
+import { ItemStatus } from '@prisma/client'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Copy } from 'lucide-react'
+import z from 'zod'
+import { zodValidator } from '@tanstack/zod-adapter'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,14 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { getItemsFn } from '@/data/items'
-import { ItemStatus } from '@prisma/client'
 import { copyToClipboard } from '@/lib/clipboard'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { Copy } from 'lucide-react'
-import z from 'zod'
-import { zodValidator } from '@tanstack/zod-adapter'
-import { useEffect, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 
 const itemsSearchSchema = z.object({
   q: z.string().default(''),
@@ -35,7 +34,16 @@ function RouteComponent() {
 
   const { status, q } = Route.useSearch()
   const [searchInput, setSearchInput] = useState(q)
-  const navigate = useNavigate({ from: Route.fullpath })
+  const navigate = useNavigate({ from: Route.fullPath })
+
+  const filteredData = data.filter((item) => {
+    const matchesStatus = status === 'all' || item.status === status
+    const matchesSearch =
+      !q ||
+      item.title?.toLowerCase().includes(q.toLowerCase()) ||
+      item.tags.some((tag) => tag.toLowerCase().includes(q.toLowerCase()))
+    return matchesStatus && matchesSearch
+  })
 
   useEffect(() => {
     if (searchInput === q) return
@@ -43,7 +51,9 @@ function RouteComponent() {
     const timeOutId = setTimeout(() => {
       navigate({ search: (prev) => ({ ...prev, q: searchInput }) })
     }, 300)
-  })
+
+    return () => clearTimeout(timeOutId)
+  }, [searchInput, navigate, q])
 
   return (
     <div className="flex flex-1 flex-col gap-6">
@@ -59,7 +69,17 @@ function RouteComponent() {
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder="search by title or tags"
         />
-        <Select>
+        <Select
+          value={status}
+          onValueChange={(value) => {
+            navigate({
+              search: (prev) => ({
+                ...prev,
+                status: value as typeof status,
+              }),
+            })
+          }}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
@@ -75,7 +95,7 @@ function RouteComponent() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {data.map((item) => (
+        {filteredData.map((item) => (
           <Card
             key={item.id}
             className="group overflow-hidden transition-all hover:shadow-lg pt-0"
