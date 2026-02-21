@@ -36,29 +36,25 @@ export default function AdminUsersPage() {
   });
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const theme = localStorage.getItem('theme');
-    if (theme === 'dark') {
-      setIsDark(true);
-      document.documentElement.classList.add('dark');
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove('dark');
+    const savedMode = localStorage.getItem("darkMode");
+    if (savedMode !== null) {
+      setDarkMode(savedMode === "true");
     }
   }, []);
 
   useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("darkMode", "true");
     } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("darkMode", "false");
     }
-  }, [isDark]);
+  }, [darkMode]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'ADMIN')) {
@@ -262,7 +258,13 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div
+      className={`min-h-screen transition-all duration-500 ${
+        darkMode
+          ? "bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900"
+          : "bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"
+      }`}
+    >
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(true)}
@@ -282,9 +284,15 @@ export default function AdminUsersPage() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900 text-white shadow-2xl z-30 transform transition-transform duration-300 ${
-        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0`}>
+      <div
+        className={`fixed inset-y-0 left-0 w-64 backdrop-blur-xl shadow-2xl z-30 transform transition-transform duration-300 ${
+          isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0 ${
+          darkMode
+            ? "bg-gradient-to-b from-slate-900/90 via-slate-800/90 to-gray-900/90 border-white/10"
+            : "bg-white/60 border-white/40"
+        } border-r`}
+      >
         {/* Close Button for Mobile */}
         <button
           onClick={() => setIsMobileMenuOpen(false)}
@@ -337,10 +345,10 @@ export default function AdminUsersPage() {
 
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-700 dark:border-gray-800 space-y-3">
           <button
-            onClick={() => setIsDark(!isDark)}
+            onClick={() => setDarkMode(!darkMode)}
             className="w-full flex items-center justify-center px-4 py-2 text-gray-300 dark:text-gray-400 hover:text-white hover:bg-gray-700/50 dark:hover:bg-gray-800/50 rounded-lg transition-all duration-200"
           >
-            {isDark ? (
+            {darkMode ? (
               <>
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -391,62 +399,78 @@ export default function AdminUsersPage() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-blue-500 dark:border-blue-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-blue-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">Total Users</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">{users.length}</p>
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>Total Users</p>
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"}`}>{users.length}</p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-blue-500/20" : "bg-blue-100"
+              }`}>
+                <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-blue-400" : "text-blue-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-purple-500 dark:border-purple-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-purple-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">Admins</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>Admins</p>
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"}`}>
                   {users.filter(u => u.role === 'ADMIN').length}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-purple-500/20" : "bg-purple-100"
+              }`}>
+                <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-purple-400" : "text-purple-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-green-500 dark:border-green-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-green-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">Regular Users</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>Regular Users</p>
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"}`}>
                   {users.filter(u => u.role === 'USER').length}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-green-500/20" : "bg-green-100"
+              }`}>
+                <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-green-400" : "text-green-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-orange-500 dark:border-orange-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-orange-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">Total Locations</p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>Total Locations</p>
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${darkMode ? "text-white" : "text-gray-900"}`}>
                   {users.reduce((sum, u) => sum + u.locationCount, 0)}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center">
-                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-orange-500/20" : "bg-orange-100"
+              }`}>
+                <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-orange-400" : "text-orange-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>

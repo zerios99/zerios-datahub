@@ -19,7 +19,7 @@ function AdminLocationsContent() {
     searchParams.get("userId") || "",
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [isDark, setIsDark] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [deleteModal, setDeleteModal] = useState<{
     show: boolean;
@@ -50,25 +50,21 @@ function AdminLocationsContent() {
   });
 
   useEffect(() => {
-    const theme = localStorage.getItem("theme");
-    if (theme === "dark") {
-      setIsDark(true);
-      document.documentElement.classList.add("dark");
-    } else {
-      setIsDark(false);
-      document.documentElement.classList.remove("dark");
+    const savedMode = localStorage.getItem("darkMode");
+    if (savedMode !== null) {
+      setDarkMode(savedMode === "true");
     }
   }, []);
 
   useEffect(() => {
-    if (isDark) {
+    if (darkMode) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
+      localStorage.setItem("darkMode", "true");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+      localStorage.setItem("darkMode", "false");
     }
-  }, [isDark]);
+  }, [darkMode]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "ADMIN")) {
@@ -220,7 +216,13 @@ function AdminLocationsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div
+      className={`min-h-screen transition-all duration-500 ${
+        darkMode
+          ? "bg-gradient-to-br from-slate-900 via-slate-800 to-gray-900"
+          : "bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50"
+      }`}
+    >
       {/* Mobile Menu Button */}
       <button
         onClick={() => setIsMobileMenuOpen(true)}
@@ -251,9 +253,13 @@ function AdminLocationsContent() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 dark:from-gray-950 dark:to-gray-900 text-white shadow-2xl z-30 transform transition-transform duration-300 ${
+        className={`fixed inset-y-0 left-0 w-64 backdrop-blur-xl shadow-2xl z-30 transform transition-transform duration-300 ${
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        } lg:translate-x-0 ${
+          darkMode
+            ? "bg-gradient-to-b from-slate-900/90 via-slate-800/90 to-gray-900/90 border-white/10"
+            : "bg-white/60 border-white/40"
+        } border-r`}
       >
         {/* Close Button for Mobile */}
         <button
@@ -338,10 +344,10 @@ function AdminLocationsContent() {
 
         <div className="absolute bottom-0 left-0 right-0 p-6 border-t border-gray-700 dark:border-gray-800 space-y-3">
           <button
-            onClick={() => setIsDark(!isDark)}
+            onClick={() => setDarkMode(!darkMode)}
             className="w-full flex items-center justify-center px-4 py-2 text-gray-300 dark:text-gray-400 hover:text-white hover:bg-gray-700/50 dark:hover:bg-gray-800/50 rounded-lg transition-all duration-200"
           >
-            {isDark ? (
+            {darkMode ? (
               <>
                 <svg
                   className="w-5 h-5 mr-2"
@@ -412,19 +418,25 @@ function AdminLocationsContent() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 lg:gap-6 mb-6 lg:mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-blue-500 dark:border-blue-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-blue-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>
                   Total
                 </p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${
+                  darkMode ? "text-white" : "text-gray-900"
+                }`}>
                   {stats.total}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-blue-500/20" : "bg-blue-100"
+              }`}>
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400"
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-blue-400" : "text-blue-600"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -446,19 +458,25 @@ function AdminLocationsContent() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-yellow-500 dark:border-yellow-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-yellow-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>
                   Pending
                 </p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${
+                  darkMode ? "text-white" : "text-gray-900"
+                }`}>
                   {stats.pending}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-xl flex items-center justify-center">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-yellow-500/20" : "bg-yellow-100"
+              }`}>
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400"
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-yellow-400" : "text-yellow-600"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -474,19 +492,25 @@ function AdminLocationsContent() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-green-500 dark:border-green-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-green-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>
                   Approved
                 </p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${
+                  darkMode ? "text-white" : "text-gray-900"
+                }`}>
                   {stats.approved}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-green-500/20" : "bg-green-100"
+              }`}>
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400"
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-green-400" : "text-green-600"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -502,19 +526,25 @@ function AdminLocationsContent() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-red-500 dark:border-red-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-red-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>
                   Rejected
                 </p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${
+                  darkMode ? "text-white" : "text-gray-900"
+                }`}>
                   {stats.rejected}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-red-500/20" : "bg-red-100"
+              }`}>
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400"
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-red-400" : "text-red-600"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -530,19 +560,25 @@ function AdminLocationsContent() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-purple-500 dark:border-purple-400">
+          <div className={`backdrop-blur-xl rounded-xl shadow-md p-4 sm:p-6 border-l-4 border-purple-500 ${
+            darkMode ? "bg-white/5 border-white/10" : "bg-white/60 border-white/40"
+          }`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium">
+                <p className={`text-xs sm:text-sm font-medium ${darkMode ? "text-white/70" : "text-gray-600"}`}>
                   Sponsored
                 </p>
-                <p className="text-xl sm:text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                <p className={`text-xl sm:text-3xl font-bold mt-1 ${
+                  darkMode ? "text-white" : "text-gray-900"
+                }`}>
                   {stats.sponsored}
                 </p>
               </div>
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center ${
+                darkMode ? "bg-purple-500/20" : "bg-purple-100"
+              }`}>
                 <svg
-                  className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400"
+                  className={`w-5 h-5 sm:w-6 sm:h-6 ${darkMode ? "text-purple-400" : "text-purple-600"}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -581,7 +617,11 @@ function AdminLocationsContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, city, category, or user..."
-              className="w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all shadow-sm"
+              className={`w-full pl-10 sm:pl-12 pr-4 py-2.5 sm:py-3 border rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all shadow-sm ${
+                darkMode
+                  ? "bg-white/5 border-white/10 text-white placeholder-white/50"
+                  : "bg-white/60 border-white/40 text-gray-900 placeholder-gray-500"
+              }`}
             />
             {searchQuery && (
               <button
@@ -609,7 +649,11 @@ function AdminLocationsContent() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all"
+              className={`px-4 py-2.5 border rounded-xl text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-all ${
+                darkMode
+                  ? "bg-white/5 border-white/10 text-white"
+                  : "bg-white/60 border-white/40 text-gray-900"
+              }`}
             >
               <option value="">All Status</option>
               <option value="PENDING">Pending</option>
@@ -673,7 +717,11 @@ function AdminLocationsContent() {
             {filteredLocations.map((location) => (
               <div
                 key={location.id}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-shadow"
+                className={`backdrop-blur-xl rounded-xl shadow-lg overflow-hidden border hover:shadow-xl transition-shadow ${
+                  darkMode
+                    ? "bg-white/5 border-white/10"
+                    : "bg-white/60 border-white/40"
+                }`}
               >
                 <div className="flex flex-col sm:flex-row">
                   <div className="w-full sm:w-32 h-32 flex-shrink-0">
@@ -684,9 +732,13 @@ function AdminLocationsContent() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
+                      <div className={`w-full h-full flex items-center justify-center ${
+                        darkMode
+                          ? "bg-gradient-to-br from-gray-700 to-gray-600"
+                          : "bg-gradient-to-br from-gray-200 to-gray-300"
+                      }`}>
                         <svg
-                          className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                          className={`w-12 h-12 ${darkMode ? "text-gray-500" : "text-gray-400"}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -709,51 +761,66 @@ function AdminLocationsContent() {
                   </div>
 
                   <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between mb-2 gap-2">
+                    <div className="flex items-start justify-between mb-3 gap-2">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate text-base">
                           {location.name}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-blue-600 dark:text-blue-400 font-medium mt-1">
                           {location.city}
                         </p>
                       </div>
                       {getStatusBadge(location.status)}
                     </div>
 
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-3 space-y-1">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-3 space-y-1.5 bg-gray-50 dark:bg-gray-700/30 p-2.5 rounded-lg">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">Category:</span>
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">الحي:</span>
+                        <span className="truncate">{location.side || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">الشارع:</span>
+                        <span className="truncate">{location.street || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">بجانب:</span>
+                        <span className="truncate">{location.path || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">باتجاه:</span>
+                        <span className="truncate">{location.dir || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">الخط:</span>
+                        <span className="truncate">{location.line || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">التصنيف:</span>
                         <span className="truncate">{location.category}</span>
-                        {location.isSponsored && (
-                          <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs rounded-full">
-                            ★ Sponsored
-                          </span>
-                        )}
                       </div>
                       {location.formalPlaceName && (
-                        <div className="truncate">
-                          <span className="font-medium">Formal:</span>{" "}
-                          {location.formalPlaceName}
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-gray-700 dark:text-gray-300 min-w-[60px]">الرسمي:</span>
+                          <span className="truncate">{location.formalPlaceName}</span>
                         </div>
                       )}
-                      {location.street && (
-                        <div className="truncate">
-                          <span className="font-medium">Street:</span>{" "}
-                          {location.street}
-                        </div>
-                      )}
-                      {location.pointType && (
-                        <div>
-                          <span className="font-medium">Type:</span>{" "}
-                          {location.pointType === "NEW" ? "🆕 New" : "✏️ Edit"}
-                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <div className="flex items-center gap-1">
+                        <span>📍</span>
+                        <span>{location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</span>
+                      </div>
+                      {location.isSponsored && (
+                        <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs rounded-full">
+                          ★ Sponsored
+                        </span>
                       )}
                     </div>
 
                     {location.user && (
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 truncate">
-                        👤 {location.user.name}
+                        👤 {location.user.name} ({location.user.email})
                       </p>
                     )}
 
